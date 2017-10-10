@@ -1,8 +1,11 @@
 import threading;
 import mCP437;
 from mWindowsAPI import *;
+from oVersionInformation import oVersionInformation;
 
 class cConsole(object):
+  oVersionInformation = oVersionInformation;
+  
   def __init__(oConsole):
     oConsole.oLock = threading.Lock();
     oConsole.uLastLineLength = 0;
