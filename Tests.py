@@ -15,9 +15,11 @@ for uBackground in xrange(0, 0x10):
   for uForeground in xrange(0, 0x10, 1):
     uColor = uForeground + uBackground * 0x10;
     asLineOutput.extend([uColor, "X"]);
-  oConsole.fPrint(*asLineOutput);
+  oConsole.fStatus(*asLineOutput);
 
-uMax = oConsole.uWindowWidth;
+uMax = oConsole.bStdOutIsConsole and oConsole.uWindowWidth or 100;
 for uCurrent in xrange(uMax):
   nProgress = uCurrent / float(uMax);
   oConsole.fProgressBar(nProgress, "Screen width = %d" % uMax);
+
+oConsole.fPrint("Tests succeeded");
