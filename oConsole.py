@@ -26,16 +26,19 @@ class cConsole(object):
   
   @property
   def uCurrentColor(oConsole):
+    if not oConsole.bStdOutIsConsole: return None;
     oConsoleScreenBufferInfo = oConsole.__foGetConsoleScreenBufferInfo();
     return oConsoleScreenBufferInfo.wAttributes & 0xFF;
 
   @property
   def uWindowWidth(oConsole):
+    if not oConsole.bStdOutIsConsole: return None;
     oConsoleScreenBufferInfo = oConsole.__foGetConsoleScreenBufferInfo();
     return oConsoleScreenBufferInfo.srWindow.Right - oConsoleScreenBufferInfo.srWindow.Left;
   
   @property
   def uWidth(oConsole):
+    if not oConsole.bStdOutIsConsole: return None;
     oConsoleScreenBufferInfo = oConsole.__foGetConsoleScreenBufferInfo();
     return oConsoleScreenBufferInfo.dwSize.X;
   
