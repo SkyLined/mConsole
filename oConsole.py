@@ -131,21 +131,20 @@ class cConsole(object):
     oConsole.__fOutputHelper(axCharsAndColors, False);
 
   def fStatus(oConsole, *axCharsAndColors):
-    # If output is redirected, do not output status messages
-    if oConsole.bStdOutIsConsole:
-      oConsole.__fOutputHelper(axCharsAndColors, True);
+    if not oConsole.bStdOutIsConsole: return;
+    oConsole.__fOutputHelper(axCharsAndColors, True);
   
   def fProgressBar(oConsole, nProgress, sMessage = "", uProgressColor = None, uBarColor = None):
+    if not oConsole.bStdOutIsConsole: return;
     if uBarColor is None:
       uBarColor = oConsole.uCurrentColor;
     if uProgressColor is None:
       uProgressColor = ((uBarColor & 0xF0) >> 4) | ((uBarColor & 0x0F) << 4);
     assert nProgress >=0 and nProgress <= 1, \
         "Progress must be [0, 1], not %s" % nProgress;
-    if oConsole.bStdOutIsConsole:
-      uBarWidth = oConsole.uWindowWidth - 1;
-      sBar = sMessage.center(uBarWidth);
-      uProgress = long(oConsole.uWindowWidth * nProgress);
-      oConsole.__fOutputHelper([uProgressColor, sBar[:uProgress], uBarColor, sBar[uProgress:]], True);
+    uBarWidth = oConsole.uWindowWidth - 1;
+    sBar = sMessage.center(uBarWidth);
+    uProgress = long(oConsole.uWindowWidth * nProgress);
+    oConsole.__fOutputHelper([uProgressColor, sBar[:uProgress], uBarColor, sBar[uProgress:]], True);
 
 oConsole = cConsole();
