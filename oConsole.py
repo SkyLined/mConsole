@@ -17,7 +17,7 @@ class cConsole(object):
   
   def __foGetConsoleScreenBufferInfo(oConsole):
     assert oConsole.bStdOutIsConsole, \
-        "Cannot set colors when output is redirected";
+        "Cannot get colors when output is redirected";
     oConsoleScreenBufferInfo = CONSOLE_SCREEN_BUFFER_INFO()
     assert KERNEL32.GetConsoleScreenBufferInfo(oConsole.hStdOut, POINTER(oConsoleScreenBufferInfo)), \
         "GetConsoleScreenBufferInfo(%d, ...) => Error %08X" % \
