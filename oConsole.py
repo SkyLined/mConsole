@@ -14,6 +14,14 @@ class cConsole(object):
     oConsole.bStdOutIsConsole = KERNEL32.GetConsoleMode(oConsole.hStdOut, POINTER(dwMode));
     oConsole.bByteOrderMarkWritten = False;
     oConsole.uDefaultColor = -1;
+    oConsole.uOriginalColor = oConsole.uCurrentColor;
+    oConsole.bLastSetColorIsNotOriginal = False;
+  
+  def __del__(oConsole):
+    # If we are outputting to a console and the last set color is not the original color, the user must have
+    # interrupted Python: set the color back to the original color the console will look as expected.
+    if not oConsole.bStdOutIsConsole and oConsole.bLastSetColorIsNotOriginal:
+      oConsole.__fSetColor(oConsole.uOriginalColor);
   
   def __foGetConsoleScreenBufferInfo(oConsole):
     assert oConsole.bStdOutIsConsole, \
@@ -56,6 +64,8 @@ class cConsole(object):
     assert KERNEL32.SetConsoleTextAttribute(oConsole.hStdOut, uColor), \
         "SetConsoleTextAttribute(%d, %d) => Error %08X" % \
         (oConsole.hStdOut, uColor, KERNEL32.GetLastError());
+    # Track if the current color is not the original, so we know when to set it back.
+    oConsole.bLastSetColorIsNotOriginal = uColor != oConsole.uOriginalColor;
   
   def __fWriteOutput(oConsole, sMessage):
     dwCharsWritten = DWORD(0);
@@ -75,7 +85,7 @@ class cConsole(object):
           (sWriteFunctionName, oConsole.hStdOut, uCharsToWrite, KERNEL32.GetLastError());
       sMessage = sMessage[dwCharsWritten.value:];
 
-  def __fOutputHelper(oConsole, axCharsAndColors, bIsStatusMessage):
+  def __fOutputHelper(oConsole, axCharsAndColors, bIsStatusMessage, uConvertTabsToSpaces, sPadding):
     assert oConsole.bStdOutIsConsole or not bIsStatusMessage, \
         "Status messages should not be output when output is redirected.";
     oConsole.oLock.acquire();
@@ -85,34 +95,56 @@ class cConsole(object):
         oConsole.__fWriteOutput(oConsole.bStdOutIsConsole and u"\r" or "\r");
       uCharsOutput = 0;
       # setup colors if outputting to a console.
-      bColorWasSet = False;
       if oConsole.bStdOutIsConsole:
         uColumns = oConsole.uWidth;
-        uOriginalColor = oConsole.uCurrentColor;
         if oConsole.uDefaultColor != -1:
           oConsole.__fSetColor(oConsole.uDefaultColor);
-          bColorWasSet = True;
       try:
         for xCharsOrColor in axCharsAndColors:
           if isinstance(xCharsOrColor, int) or isinstance(xCharsOrColor, long):
             if oConsole.bStdOutIsConsole: # If output is redirected, colors will not be set, so don't try
-              if xCharsOrColor == -1: xCharsOrColor = uOriginalColor;
-              oConsole.__fSetColor(xCharsOrColor);
-              bColorWasSet = True;
+              if xCharsOrColor == -1:
+                uColor = oConsole.uOriginalColor;
+              else:
+                uColor = xCharsOrColor;
+              oConsole.__fSetColor(uColor);
           else:
             assert isinstance(xCharsOrColor, str) or isinstance(xCharsOrColor, unicode), \
                 "You cannot print %s (type = %s) directly; it must be converted to a string" % (repr(xCharsOrColor), xCharsOrColor.__class__.__name__);
-            if bIsStatusMessage and uCharsOutput + len(xCharsOrColor) >= uColumns:
-              # Do not let a status message span multiple lines.
-              xCharsOrColor = xCharsOrColor[:uColumns - uCharsOutput - 1];
-            oConsole.__fWriteOutput(xCharsOrColor);
-            uCharsOutput += len(xCharsOrColor);
+            uCharsLeftOnLine = uColumns - uCharsOutput - 1;
+            if uConvertTabsToSpaces:
+              uCurrentColumn = uCharsOutput;
+              sMessage = "";
+              for sChar in xCharsOrColor:
+                if bIsStatusMessage and uCharsLeftOnLine == 0: break;
+                if ord(sChar) == ord('\t'):
+                  sChar = " ";
+                  uCount = (uConvertTabsToSpaces - (uCurrentColumn % uConvertTabsToSpaces)) or uConvertTabsToSpaces;
+                  if bIsStatusMessage:
+                    uCount = min(uCount, uCharsLeftOnLine);
+                else:
+                  uCount = 1;
+                sMessage += sChar * uCount;
+                uCurrentColumn += uCount;
+                uCharsLeftOnLine -= uCount;
+            else:
+              sMessage = xCharsOrColor;
+              if bIsStatusMessage and len(sMessage) > uCharsLeftOnLine:
+                # Do not let a status message span multiple lines.
+                sMessage = sMessage[:uCharsLeftOnLine];
+            oConsole.__fWriteOutput(sMessage);
+            uCharsOutput += len(sMessage);
             if bIsStatusMessage and uCharsOutput == uColumns - 1:
               # We've reached the end of the line and the remained of the arguments will not be output.
               break;
+        if sPadding and uCharsOutput < uColumns:
+          uPaddingColumns = uColumns - uCharsOutput - 1;
+          sLinePadding = (sPadding * (uPaddingColumns / len(sPadding)))[:uPaddingColumns];
+          oConsole.__fWriteOutput(sLinePadding);
+          uCharsOutput += uPaddingColumns;
       finally:
-        if bColorWasSet:
-          oConsole.__fSetColor(uOriginalColor);
+        if oConsole.bLastSetColorIsNotOriginal:
+          oConsole.__fSetColor(oConsole.uOriginalColor);
       if oConsole.bStdOutIsConsole:
         # Optionally output some padding if this is a status message that is smaller than the previous status message.
         # Then go back to the start of the line and move to the next line if this is not a status message.
@@ -127,14 +159,32 @@ class cConsole(object):
     finally:
       oConsole.oLock.release();
 
-  def fPrint(oConsole, *axCharsAndColors):
-    oConsole.__fOutputHelper(axCharsAndColors, False);
+  def fPrint(oConsole, *axCharsAndColors, **dxFlags):
+    for sFlag in dxFlags.keys():
+      assert sFlag in ["uConvertTabsToSpaces", "sPadding"], \
+          "Unknown flag %s" % sFlag;
+    oConsole.__fOutputHelper(
+      axCharsAndColors,
+      bIsStatusMessage = False,
+      uConvertTabsToSpaces = dxFlags.get("uConvertTabsToSpaces", 0),
+      sPadding = dxFlags.get("sPadding", None),
+    );
 
-  def fStatus(oConsole, *axCharsAndColors):
-    if not oConsole.bStdOutIsConsole: return;
-    oConsole.__fOutputHelper(axCharsAndColors, True);
+  def fStatus(oConsole, *axCharsAndColors, **dxFlags):
+    for sFlag in dxFlags.keys():
+      assert sFlag in ["uConvertTabsToSpaces", "sPadding"], \
+          "Unknown flag %s" % sFlag;
+    oConsole.__fOutputHelper(
+      axCharsAndColors,
+      bIsStatusMessage = True,
+      uConvertTabsToSpaces = dxFlags.get("uConvertTabsToSpaces", 0),
+      sPadding = dxFlags.get("sPadding", None),
+    );
   
   def fProgressBar(oConsole, nProgress, sMessage = "", uProgressColor = None, uBarColor = None):
+    # Converting tabs to spaces in sMessage is not possible because this requires knowning which column each character
+    # is going to be located. However, sMessage will be centered, so the location of each character depends on its
+    # length, which we cannot know until after converting the tabs to spaces. This is a Catch-22 type issue.
     if not oConsole.bStdOutIsConsole: return;
     if uBarColor is None:
       uBarColor = oConsole.uCurrentColor;
@@ -145,6 +195,11 @@ class cConsole(object):
     uBarWidth = oConsole.uWindowWidth - 1;
     sBar = sMessage.center(uBarWidth);
     uProgress = long(oConsole.uWindowWidth * nProgress);
-    oConsole.__fOutputHelper([uProgressColor, sBar[:uProgress], uBarColor, sBar[uProgress:]], True);
+    oConsole.__fOutputHelper(
+      [uProgressColor, sBar[:uProgress], uBarColor, sBar[uProgress:]],
+      bIsStatusMessage = True,
+      uConvertTabsToSpaces = 0,
+      sPadding = None,
+    );
 
 oConsole = cConsole();
