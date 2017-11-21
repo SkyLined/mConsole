@@ -2,8 +2,9 @@
 
 ECHO * Running unit-tests...
 
+
 ECHO   * Test if oConsole can output to the console...
-START "" /WAIT %ComSpec% /C PYTHON "Tests.py"
+PYTHON "Tests.py"
 IF ERRORLEVEL 1 GOTO :ERROR
 
 ECHO   * Test if oConsole can detect redirected output...
