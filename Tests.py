@@ -22,4 +22,16 @@ for uCurrent in xrange(uMax):
   nProgress = uCurrent / float(uMax);
   oConsole.fProgressBar(nProgress, "Screen width = %d" % uMax);
 
+sTestMessage = "\t\tx\tTabs to spaces";
+uTestMessageLength = len(sTestMessage);
+oConsole.fStatus(sTestMessage);
+assert oConsole.uLastLineLength == uTestMessageLength, \
+    "Expected last line to be %d chars, got %d" % (uTestMessageLength, oConsole.uLastLineLength);
+uTestMessageLength = len(sTestMessage.replace("\t\tx\t", "12341234x234"));
+oConsole.fStatus(sTestMessage, uConvertTabsToSpaces = 4);
+assert oConsole.uLastLineLength == uTestMessageLength, \
+    "Expected last line to be %d chars, got %d" % (uTestMessageLength, oConsole.uLastLineLength);
+
+oConsole.fPrint(0x1E, "Padding test ", sPadding = "- ");
+
 oConsole.fPrint("Tests succeeded");
