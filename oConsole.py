@@ -111,7 +111,8 @@ class cConsole(object):
           else:
             assert isinstance(xCharsOrColor, str) or isinstance(xCharsOrColor, unicode), \
                 "You cannot print %s (type = %s) directly; it must be converted to a string" % (repr(xCharsOrColor), xCharsOrColor.__class__.__name__);
-            uCharsLeftOnLine = uColumns - uCharsOutput - 1;
+            if oConsole.bStdOutIsConsole:
+              uCharsLeftOnLine = uColumns - uCharsOutput - 1;
             if uConvertTabsToSpaces:
               uCurrentColumn = uCharsOutput;
               sMessage = "";
@@ -126,7 +127,8 @@ class cConsole(object):
                   uCount = 1;
                 sMessage += sChar * uCount;
                 uCurrentColumn += uCount;
-                uCharsLeftOnLine -= uCount;
+                if oConsole.bStdOutIsConsole:
+                  uCharsLeftOnLine -= uCount;
             else:
               sMessage = xCharsOrColor;
               if bIsStatusMessage and len(sMessage) > uCharsLeftOnLine:
