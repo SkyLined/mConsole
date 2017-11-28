@@ -5,6 +5,7 @@ from oVersionInformation import oVersionInformation;
 
 class cConsole(object):
   oVersionInformation = oVersionInformation;
+  uColumnsForRedirectedOutput = 80;
   
   def __init__(oSelf):
     oSelf.oLock = threading.RLock();
@@ -105,6 +106,8 @@ class cConsole(object):
         uColumns = oSelf.uWidth;
         if oSelf.uDefaultColor != -1:
           oSelf.__fSetColor(oSelf.uDefaultColor);
+      else:
+        uColumns = oSelf.uColumnsForRedirectedOutput;
       try:
         for xCharsOrColor in axCharsAndColors:
           if isinstance(xCharsOrColor, int) or isinstance(xCharsOrColor, long):
@@ -179,15 +182,17 @@ class cConsole(object):
     );
 
   def fStatus(oSelf, *axCharsAndColors, **dxFlags):
-    for sFlag in dxFlags.keys():
-      assert sFlag in ["uConvertTabsToSpaces", "sPadding"], \
-          "Unknown flag %s" % sFlag;
-    oSelf.__fOutputHelper(
-      axCharsAndColors,
-      bIsStatusMessage = True,
-      uConvertTabsToSpaces = dxFlags.get("uConvertTabsToSpaces", 0),
-      sPadding = dxFlags.get("sPadding", None),
-    );
+    # Status messages are not shown if output is redirected.
+    if oSelf.bStdOutIsConsole:
+      for sFlag in dxFlags.keys():
+        assert sFlag in ["uConvertTabsToSpaces", "sPadding"], \
+            "Unknown flag %s" % sFlag;
+      oSelf.__fOutputHelper(
+        axCharsAndColors,
+        bIsStatusMessage = True,
+        uConvertTabsToSpaces = dxFlags.get("uConvertTabsToSpaces", 0),
+        sPadding = dxFlags.get("sPadding", None),
+      );
   
   def fProgressBar(oSelf, nProgress, sMessage = "", uProgressColor = None, uBarColor = None):
     # Converting tabs to spaces in sMessage is not possible because this requires knowning which column each character
