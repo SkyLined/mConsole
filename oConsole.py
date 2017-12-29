@@ -214,5 +214,10 @@ class cConsole(object):
       uConvertTabsToSpaces = 0,
       sPadding = None,
     );
-
+  
+  def fSetTitle(oSelf, sTitle):
+    assert KERNEL32.SetConsoleTitleW(sTitle), \
+        "SetConsoleTitleW(%s) => Error %08X" % \
+        (repr(sTitle), KERNEL32.GetLastError());
+  
 oConsole = cConsole();
