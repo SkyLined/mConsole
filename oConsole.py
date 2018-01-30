@@ -1,6 +1,9 @@
 import threading;
 import mCP437;
-from mWindowsAPI import *;
+from mWindowsAPI.mDLLs import KERNEL32;
+from mWindowsAPI.mDefines import STD_OUTPUT_HANDLE;
+from mWindowsAPI.mTypes import CONSOLE_SCREEN_BUFFER_INFO, DWORD;
+from mWindowsAPI.mFunctions import POINTER;
 from oVersionInformation import oVersionInformation;
 
 class cConsole(object):
