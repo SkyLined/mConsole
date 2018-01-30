@@ -27,11 +27,15 @@ class cConsole(object):
   def fUnlock(oSelf):
     oSelf.oLock.release();
   
-  def __del__(oSelf):
+  def fCleanup(oSelf):
     # If we are outputting to a console and the last set color is not the original color, the user must have
     # interrupted Python: set the color back to the original color the console will look as expected.
-    if not oSelf.bStdOutIsConsole and oSelf.bLastSetColorIsNotOriginal:
-      oSelf.__fSetColor(oSelf.uOriginalColor);
+    # Also, if the last output was a status message, we need to clean it up.
+    if oSelf.bStdOutIsConsole:
+      if oSelf.bLastSetColorIsNotOriginal:
+        oSelf.__fSetColor(oSelf.uOriginalColor);
+      if oSelf.uLastLineLength:
+        oSelf.__fWriteOutput(u"\r" + u" " * oSelf.uLastLineLength + u"\r");
   
   def __foGetConsoleScreenBufferInfo(oSelf):
     assert oSelf.bStdOutIsConsole, \
