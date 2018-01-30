@@ -37,3 +37,6 @@ if oConsole.uWindowWidth is not None:
 oConsole.fPrint(0x1E, "Padding test ", sPadding = "- ");
 
 oConsole.fPrint("Tests succeeded");
+oConsole.fStatus("This should not be visible");
+oConsole.fCleanup();
+
