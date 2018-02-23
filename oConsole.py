@@ -47,8 +47,10 @@ class cConsole(object):
     dwMode = DWORD(0);
     oSelf.bStdOutIsConsole = KERNEL32.GetConsoleMode(oSelf.hStdOut, POINTER(dwMode));
     oSelf.bByteOrderMarkWritten = False;
-    oSelf.uDefaultColor = 0;
     oSelf.uOriginalColor = oSelf.uCurrentColor;
+    oSelf.uDefaultColor = 0;
+    oSelf.uDefaultBarColor = 0xFF00 | (oSelf.uOriginalColor & 0xFF);
+    oSelf.uDefaultProgressColor = 0xFF00 | ((oSelf.uOriginalColor & 0xF0) >> 4) | ((oSelf.uOriginalColor & 0x0F) << 4);
     oSelf.bLastSetColorIsNotOriginal = False;
   
   def fLock(oSelf):
@@ -82,7 +84,7 @@ class cConsole(object):
     oConsoleScreenBufferInfo = oSelf.__foGetConsoleScreenBufferInfo();
     uColor = oConsoleScreenBufferInfo.wAttributes & 0xFF;
     bUnderlined = oConsoleScreenBufferInfo.wAttributes & 0x8000;
-    return (bUnderlined and 0x10000 or 0) + 0xFF00 + uColor;
+    return (bUnderlined and 0x10000 or 0) | 0xFF00 | uColor;
 
   @property
   def uWindowWidth(oSelf):
@@ -104,7 +106,7 @@ class cConsole(object):
     bUnderline = (uColor >> 16);
     assert bUnderline in [0, 1], \
         "You cannot use color 0x%X; maybe you are trying to print a number without converting it to a string?" % uColor;
-    uAttribute = (oSelf.uCurrentColor & (uMask ^ 0xFF)) + (uColor & uMask) + (bUnderline and 0x8000 or 0);
+    uAttribute = (oSelf.uCurrentColor & (uMask ^ 0xFF)) | (uColor & uMask) | (bUnderline and 0x8000 or 0);
     assert KERNEL32.SetConsoleTextAttribute(oSelf.hStdOut, uAttribute), \
         "SetConsoleTextAttribute(%d, %d) => Error %08X" % \
         (oSelf.hStdOut, uAttribute, KERNEL32.GetLastError());
@@ -237,9 +239,9 @@ class cConsole(object):
     # length, which we cannot know until after converting the tabs to spaces. This is a Catch-22 type issue.
     if not oSelf.bStdOutIsConsole: return;
     if uBarColor is None:
-      uBarColor = oSelf.uCurrentColor;
+      uBarColor = oSelf.uDefaultBarColor;
     if uProgressColor is None:
-      uProgressColor = ((uBarColor & 0xF0) >> 4) | ((uBarColor & 0x0F) << 4);
+      uProgressColor = oSelf.uDefaultProgressColor;
     assert nProgress >=0 and nProgress <= 1, \
         "Progress must be [0, 1], not %s" % nProgress;
     uBarWidth = oSelf.uWindowWidth - 1;
