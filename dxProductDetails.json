@@ -1,0 +1,16 @@
+{
+  "asDependentOnProductNames": [
+    "mProductDetails", 
+    "mWindowsAPI"
+  ], 
+  "oProductVersion": "2018-02-23 14:16", 
+  "oRepository": {
+    "sBranch": "master", 
+    "sRepositoryName": "oConsole", 
+    "sType": "GitHub", 
+    "sUserName": "SkyLined"
+  }, 
+  "sLicenseServerURL": "https://license.skylined.nl/fdxGetLicenseCheckResult.php", 
+  "sProductName": "oConsole", 
+  "sTrialPeriodDuration": "1m"
+}

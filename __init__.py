@@ -1,3 +1,1 @@
-from oConsole import oConsole;
-
-from oVersionInformation import oVersionInformation;
+from .oConsole import oConsole;
