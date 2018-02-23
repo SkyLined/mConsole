@@ -47,11 +47,12 @@ class cConsole(object):
     dwMode = DWORD(0);
     oSelf.bStdOutIsConsole = KERNEL32.GetConsoleMode(oSelf.hStdOut, POINTER(dwMode));
     oSelf.bByteOrderMarkWritten = False;
-    oSelf.uOriginalColor = oSelf.uCurrentColor;
-    oSelf.uDefaultColor = 0;
-    oSelf.uDefaultBarColor = 0xFF00 | (oSelf.uOriginalColor & 0xFF);
-    oSelf.uDefaultProgressColor = 0xFF00 | ((oSelf.uOriginalColor & 0xF0) >> 4) | ((oSelf.uOriginalColor & 0x0F) << 4);
-    oSelf.bLastSetColorIsNotOriginal = False;
+    if oSelf.bStdOutIsConsole:
+      oSelf.uOriginalColor = oSelf.uCurrentColor;
+      oSelf.uDefaultColor = 0;
+      oSelf.uDefaultBarColor = 0xFF00 | (oSelf.uOriginalColor & 0xFF);
+      oSelf.uDefaultProgressColor = 0xFF00 | ((oSelf.uOriginalColor & 0xF0) >> 4) | ((oSelf.uOriginalColor & 0x0F) << 4);
+      oSelf.bLastSetColorIsNotOriginal = False;
   
   def fLock(oSelf):
     oSelf.oLock.acquire();
@@ -193,7 +194,7 @@ class cConsole(object):
           oSelf.__fWriteOutput(sLinePadding);
           uCharsOutput += uPaddingColumns;
       finally:
-        if oSelf.bLastSetColorIsNotOriginal:
+        if oSelf.bStdOutIsConsole and oSelf.bLastSetColorIsNotOriginal:
           oSelf.__fSetColor(oSelf.uOriginalColor);
       if oSelf.bStdOutIsConsole:
         # Optionally output some padding if this is a status message that is smaller than the previous status message.
