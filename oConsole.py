@@ -47,7 +47,7 @@ class cConsole(object):
     dwMode = DWORD(0);
     oSelf.bStdOutIsConsole = KERNEL32.GetConsoleMode(oSelf.hStdOut, POINTER(dwMode));
     oSelf.bByteOrderMarkWritten = False;
-    oSelf.uDefaultColor = -1;
+    oSelf.uDefaultColor = 0;
     oSelf.uOriginalColor = oSelf.uCurrentColor;
     oSelf.bLastSetColorIsNotOriginal = False;
   
@@ -80,7 +80,9 @@ class cConsole(object):
   def uCurrentColor(oSelf):
     if not oSelf.bStdOutIsConsole: return None;
     oConsoleScreenBufferInfo = oSelf.__foGetConsoleScreenBufferInfo();
-    return oConsoleScreenBufferInfo.wAttributes & 0xFF;
+    uColor = oConsoleScreenBufferInfo.wAttributes & 0xFF;
+    bUnderlined = oConsoleScreenBufferInfo.wAttributes & 0x8000;
+    return (bUnderlined and 0x10000 or 0) + 0xFF00 + uColor;
 
   @property
   def uWindowWidth(oSelf):
@@ -98,18 +100,16 @@ class cConsole(object):
     assert oSelf.bStdOutIsConsole, \
         "Cannot set colors when output is redirected";
 
-    uMask = uColor >> 8;
-    assert uMask in xrange(0, 0x100), \
+    uMask = (uColor >> 8) & 0xFF;
+    bUnderline = (uColor >> 16);
+    assert bUnderline in [0, 1], \
         "You cannot use color 0x%X; maybe you are trying to print a number without converting it to a string?" % uColor;
-    uColor &= 0xFF;
-    if uMask:
-      uCurrentColor = oSelf.uCurrentColor;
-      uColor = (uCurrentColor & (uMask ^ 0xFF)) + (uColor & uMask);
-    assert KERNEL32.SetConsoleTextAttribute(oSelf.hStdOut, uColor), \
+    uAttribute = (oSelf.uCurrentColor & (uMask ^ 0xFF)) + (uColor & uMask) + (bUnderline and 0x8000 or 0);
+    assert KERNEL32.SetConsoleTextAttribute(oSelf.hStdOut, uAttribute), \
         "SetConsoleTextAttribute(%d, %d) => Error %08X" % \
-        (oSelf.hStdOut, uColor, KERNEL32.GetLastError());
+        (oSelf.hStdOut, uAttribute, KERNEL32.GetLastError());
     # Track if the current color is not the original, so we know when to set it back.
-    oSelf.bLastSetColorIsNotOriginal = uColor != oSelf.uOriginalColor;
+    oSelf.bLastSetColorIsNotOriginal = uAttribute != oSelf.uOriginalColor;
   
   def __fWriteOutput(oSelf, sMessage):
     dwCharsWritten = DWORD(0);

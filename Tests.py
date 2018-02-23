@@ -14,8 +14,8 @@ for uBackground in xrange(0, 0x10):
   asLineOutput = [];
   for uForeground in xrange(0, 0x10, 1):
     uColor = uForeground + uBackground * 0x10;
-    asLineOutput.extend([uColor, "X"]);
-  oConsole.fStatus(*asLineOutput);
+    asLineOutput.extend([0xFF00 + uColor, "##"]);
+  oConsole.fPrint(*asLineOutput);
 
 uMax = oConsole.uWindowWidth or 100;
 for uCurrent in xrange(uMax):
@@ -34,7 +34,18 @@ if oConsole.uWindowWidth is not None:
   assert oConsole.uLastLineLength == uTestMessageLength, \
       "Expected last line to be %d chars, got %d" % (uTestMessageLength, oConsole.uLastLineLength);
 
-oConsole.fPrint(0x1E, "Padding test ", sPadding = "- ");
+oConsole.fPrint(0xFF1E, "Padding test", sPadding = " -");
+oConsole.fPrint("This tests ", 0x10000, "underlined", 0, " text.");
+if oConsole.bStdOutIsConsole:
+  # Colors are only processed when outputting to a console. If you specify an invalid color, the code assumes you
+  # accidentally output a number without first converting it to a string. If output is redirected, the color is not
+  # processed and this error is not detected.
+  try:
+    oConsole.fPrint(0x20000);
+  except:
+    pass;
+  else:
+    raise AssertionFailure("Using a color number that is outside the value range did not cause an exception!");
 
 oConsole.fPrint("Tests succeeded");
 oConsole.fStatus("This should not be visible");
