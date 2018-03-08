@@ -1,6 +1,5 @@
 {
   "asDependentOnProductNames": [
-    "mProductDetails", 
     "mWindowsAPI"
   ], 
   "oProductVersion": "2018-03-08 08:52", 
