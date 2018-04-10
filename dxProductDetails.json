@@ -2,14 +2,14 @@
   "asDependentOnProductNames": [
     "mWindowsAPI"
   ], 
-  "oProductVersion": "2018-03-09 22:36", 
+  "oProductVersion": "2018-04-10 07:59", 
   "oRepository": {
     "sBranch": "master", 
     "sRepositoryName": "oConsole", 
     "sType": "GitHub", 
     "sUserName": "SkyLined"
   }, 
-  "sLicenseServerURL": "https://license.skylined.nl/fdxGetLicenseCheckResult.php", 
+  "sLicenseServerURL": "https://license.skylined.nl/dxCheckLicense/", 
   "sProductAuthor": "SkyLined", 
   "sProductName": "oConsole", 
   "sProductURL": "https://github.com/SkyLined/oConsole", 
