@@ -53,6 +53,7 @@ class cConsole(object):
       oSelf.uDefaultBarColor = 0xFF00 | (oSelf.uOriginalColor & 0xFF);
       oSelf.uDefaultProgressColor = 0xFF00 | ((oSelf.uOriginalColor & 0xF0) >> 4) | ((oSelf.uOriginalColor & 0x0F) << 4);
       oSelf.bLastSetColorIsNotOriginal = False;
+    oSelf.sLastBar = None; # No progress bar is being shown
   
   def fLock(oSelf):
     oSelf.oLock.acquire();
@@ -69,6 +70,7 @@ class cConsole(object):
         oSelf.__fSetColor(oSelf.uOriginalColor);
       if oSelf.uLastLineLength:
         oSelf.__fWriteOutput(u"\r" + u" " * oSelf.uLastLineLength + u"\r");
+      oSelf.sLastBar = None; # Any progress bar needs to be redrawn
   
   def __foGetConsoleScreenBufferInfo(oSelf):
     assert oSelf.bStdOutIsConsole, \
@@ -220,19 +222,21 @@ class cConsole(object):
       uConvertTabsToSpaces = dxFlags.get("uConvertTabsToSpaces", 0),
       sPadding = dxFlags.get("sPadding", None),
     );
+    oSelf.sLastBar = None; # Any progress bar needs to be redrawn
 
   def fStatus(oSelf, *axCharsAndColors, **dxFlags):
     # Status messages are not shown if output is redirected.
-    if oSelf.bStdOutIsConsole:
-      for sFlag in dxFlags.keys():
-        assert sFlag in ["uConvertTabsToSpaces", "sPadding"], \
-            "Unknown flag %s" % sFlag;
-      oSelf.__fOutputHelper(
-        axCharsAndColors,
-        bIsStatusMessage = True,
-        uConvertTabsToSpaces = dxFlags.get("uConvertTabsToSpaces", 0),
-        sPadding = dxFlags.get("sPadding", None),
-      );
+    if not oSelf.bStdOutIsConsole: return;
+    for sFlag in dxFlags.keys():
+      assert sFlag in ["uConvertTabsToSpaces", "sPadding"], \
+          "Unknown flag %s" % sFlag;
+    oSelf.__fOutputHelper(
+      axCharsAndColors,
+      bIsStatusMessage = True,
+      uConvertTabsToSpaces = dxFlags.get("uConvertTabsToSpaces", 0),
+      sPadding = dxFlags.get("sPadding", None),
+    );
+    oSelf.sLastBar = None; # Any progress bar needs to be redrawn
   
   def fProgressBar(oSelf, nProgress, sMessage = "", uProgressColor = None, uBarColor = None):
     # Converting tabs to spaces in sMessage is not possible because this requires knowning which column each character
@@ -248,12 +252,23 @@ class cConsole(object):
     uBarWidth = oSelf.uWindowWidth - 1;
     sBar = sMessage.center(uBarWidth);
     uProgress = long(oSelf.uWindowWidth * nProgress);
-    oSelf.__fOutputHelper(
-      [uProgressColor, sBar[:uProgress], uBarColor, sBar[uProgress:]],
-      bIsStatusMessage = True,
-      uConvertTabsToSpaces = 0,
-      sPadding = None,
-    );
+    # If this progress bar looks the same as the previous, we haven't made progress and won't show it.
+    if (
+      sBar != oSelf.sLastBar
+      or uBarColor != oSelf.uLastBarColor
+      or uProgressColor != oSelf.uLastProgressColor
+      or uProgress != oSelf.uLastProgress
+    ):
+      oSelf.__fOutputHelper(
+        [uProgressColor, sBar[:uProgress], uBarColor, sBar[uProgress:]],
+        bIsStatusMessage = True,
+        uConvertTabsToSpaces = 0,
+        sPadding = None,
+      );
+      oSelf.uLastBarColor = uBarColor;
+      oSelf.uLastProgressColor = uProgressColor;
+      oSelf.sLastBar = sBar;
+      oSelf.uLastProgress = uProgress;
   
   def fSetTitle(oSelf, sTitle):
     assert KERNEL32.SetConsoleTitleW(sTitle), \

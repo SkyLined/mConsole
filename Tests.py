@@ -17,10 +17,11 @@ for uBackground in xrange(0, 0x10):
     asLineOutput.extend([0xFF00 + uColor, "##"]);
   oConsole.fPrint(*asLineOutput);
 
-uMax = oConsole.uWindowWidth or 100;
-for uCurrent in xrange(uMax):
-  nProgress = uCurrent / float(uMax);
-  oConsole.fProgressBar(nProgress, "Screen width = %d" % uMax);
+# Use a large value, as this will be very slow unless the progress bar is not drawn when it's not changed as it should be.
+uLoops = 10000;
+for uCurrent in xrange(uLoops):
+  nProgress = uCurrent / float(uLoops);
+  oConsole.fProgressBar(nProgress, "Screen width = %d" % (oConsole.uWindowWidth or 100));
 
 if oConsole.uWindowWidth is not None:
   # These tests apply to non-redirected output (to a window) only
