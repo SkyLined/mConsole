@@ -2,7 +2,7 @@
   "asDependentOnProductNames": [
     "mWindowsAPI"
   ], 
-  "oProductVersion": "2018-05-30 11:28", 
+  "oProductVersion": "2018-05-31 06:56", 
   "oRepository": {
     "sBranch": "master", 
     "sRepositoryName": "oConsole", 
