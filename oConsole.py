@@ -135,6 +135,7 @@ class cConsole(object):
       sMessage = sMessage[dwCharsWritten.value:];
 
   def __fOutputHelper(oSelf, axCharsAndColors, bIsStatusMessage, uConvertTabsToSpaces, sPadding):
+    ### !!!NOTE!!! axCharsAndColors will be modified by this function !!!NOTE!!! ###
     assert oSelf.bStdOutIsConsole or not bIsStatusMessage, \
         "Status messages should not be output when output is redirected.";
     oSelf.oLock.acquire();
@@ -151,8 +152,13 @@ class cConsole(object):
       else:
         uColumns = oSelf.uColumnsForRedirectedOutput;
       try:
-        for xCharsOrColor in axCharsAndColors:
-          if isinstance(xCharsOrColor, int) or isinstance(xCharsOrColor, long):
+        while axCharsAndColors:
+          xCharsOrColor = axCharsAndColors.pop(0);
+          if isinstance(xCharsOrColor, list):
+            # elements in lists are processesed in order (this allows you to more easily generate output).
+            axCharsAndColors = xCharsOrColor + axCharsAndColors;
+          elif isinstance(xCharsOrColor, int) or isinstance(xCharsOrColor, long):
+            # integers and longs are interpreted as colors.
             if oSelf.bStdOutIsConsole: # If output is redirected, colors will not be set, so don't try
               if xCharsOrColor == -1:
                 uColor = oSelf.uOriginalColor;
@@ -160,6 +166,7 @@ class cConsole(object):
                 uColor = xCharsOrColor;
               oSelf.__fSetColor(uColor);
           else:
+            # strings are written to stdout
             assert isinstance(xCharsOrColor, str) or isinstance(xCharsOrColor, unicode), \
                 "You cannot print %s (type = %s) directly; it must be converted to a string" % (repr(xCharsOrColor), xCharsOrColor.__class__.__name__);
             if oSelf.bStdOutIsConsole:
@@ -217,7 +224,7 @@ class cConsole(object):
       assert sFlag in ["uConvertTabsToSpaces", "sPadding"], \
           "Unknown flag %s" % sFlag;
     oSelf.__fOutputHelper(
-      axCharsAndColors,
+      list(axCharsAndColors),
       bIsStatusMessage = False,
       uConvertTabsToSpaces = dxFlags.get("uConvertTabsToSpaces", 0),
       sPadding = dxFlags.get("sPadding", None),
@@ -231,7 +238,7 @@ class cConsole(object):
       assert sFlag in ["uConvertTabsToSpaces", "sPadding"], \
           "Unknown flag %s" % sFlag;
     oSelf.__fOutputHelper(
-      axCharsAndColors,
+      list(axCharsAndColors),
       bIsStatusMessage = True,
       uConvertTabsToSpaces = dxFlags.get("uConvertTabsToSpaces", 0),
       sPadding = dxFlags.get("sPadding", None),
