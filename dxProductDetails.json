@@ -13,5 +13,5 @@
   "sProductAuthor": "SkyLined", 
   "sProductName": "oConsole", 
   "sProductURL": "https://github.com/SkyLined/oConsole", 
-  "sTrialPeriodDuration": "1m"
+  "oTrialPeriodDuration": "1m"
 }
