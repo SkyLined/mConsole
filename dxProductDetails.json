@@ -2,7 +2,7 @@
   "asDependentOnProductNames": [
     "mWindowsSDK"
   ], 
-  "oProductVersion": "2019-08-01 15:30", 
+  "oProductVersion": "2019-08-01 19:48", 
   "oRepository": {
     "sBranch": "master", 
     "sRepositoryName": "oConsole", 
