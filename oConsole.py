@@ -32,10 +32,8 @@ for (sModuleName, sDownloadURL) in [
 sys.path = asOriginalSysPath;
 
 import mCP437;
-from mWindowsAPI.mDLLs import KERNEL32;
-from mWindowsAPI.mDefines import STD_OUTPUT_HANDLE;
-from mWindowsAPI.mTypes import CONSOLE_SCREEN_BUFFER_INFO, DWORD;
-from mWindowsAPI.mFunctions import POINTER;
+from mWindowsAPI.mDLLs import oKernel32;
+from mWindowsSDK import *;
 
 class cConsole(object):
   uColumnsForRedirectedOutput = 80;
@@ -43,9 +41,9 @@ class cConsole(object):
   def __init__(oSelf):
     oSelf.oLock = threading.RLock();
     oSelf.uLastLineLength = 0;
-    oSelf.hStdOut = KERNEL32.GetStdHandle(STD_OUTPUT_HANDLE);
-    dwMode = DWORD(0);
-    oSelf.bStdOutIsConsole = KERNEL32.GetConsoleMode(oSelf.hStdOut, POINTER(dwMode));
+    oSelf.ohStdOut = oKernel32.GetStdHandle(STD_OUTPUT_HANDLE);
+    odwMode = DWORD(0);
+    oSelf.bStdOutIsConsole = True if oKernel32.GetConsoleMode(oSelf.ohStdOut, odwMode.foCreatePointer()).value else False;
     oSelf.bByteOrderMarkWritten = False;
     if oSelf.bStdOutIsConsole:
       oSelf.uOriginalColor = oSelf.uCurrentColor;
@@ -76,30 +74,30 @@ class cConsole(object):
     assert oSelf.bStdOutIsConsole, \
         "Cannot get colors when output is redirected";
     oConsoleScreenBufferInfo = CONSOLE_SCREEN_BUFFER_INFO()
-    assert KERNEL32.GetConsoleScreenBufferInfo(oSelf.hStdOut, POINTER(oConsoleScreenBufferInfo)), \
+    assert oKernel32.GetConsoleScreenBufferInfo(oSelf.ohStdOut, oConsoleScreenBufferInfo.foCreatePointer()), \
         "GetConsoleScreenBufferInfo(%d, ...) => Error %08X" % \
-        (oSelf.hStdOut, KERNEL32.GetLastError());
+        (oSelf.ohStdOut, oKernel32.GetLastError());
     return oConsoleScreenBufferInfo;
   
   @property
   def uCurrentColor(oSelf):
     if not oSelf.bStdOutIsConsole: return None;
     oConsoleScreenBufferInfo = oSelf.__foGetConsoleScreenBufferInfo();
-    uColor = oConsoleScreenBufferInfo.wAttributes & 0xFF;
-    bUnderlined = oConsoleScreenBufferInfo.wAttributes & 0x8000;
+    uColor = oConsoleScreenBufferInfo.wAttributes.value & 0xFF;
+    bUnderlined = oConsoleScreenBufferInfo.wAttributes.value & 0x8000;
     return (bUnderlined and 0x10000 or 0) | 0xFF00 | uColor;
 
   @property
   def uWindowWidth(oSelf):
     if not oSelf.bStdOutIsConsole: return None;
     oConsoleScreenBufferInfo = oSelf.__foGetConsoleScreenBufferInfo();
-    return oConsoleScreenBufferInfo.srWindow.Right - oConsoleScreenBufferInfo.srWindow.Left;
+    return oConsoleScreenBufferInfo.srWindow.Right.value - oConsoleScreenBufferInfo.srWindow.Left.value;
   
   @property
   def uWidth(oSelf):
     if not oSelf.bStdOutIsConsole: return None;
     oConsoleScreenBufferInfo = oSelf.__foGetConsoleScreenBufferInfo();
-    return oConsoleScreenBufferInfo.dwSize.X;
+    return oConsoleScreenBufferInfo.dwSize.X.value;
   
   def __fSetColor(oSelf, uColor):
     assert oSelf.bStdOutIsConsole, \
@@ -110,29 +108,39 @@ class cConsole(object):
     assert bUnderline in [0, 1], \
         "You cannot use color 0x%X; maybe you are trying to print a number without converting it to a string?" % uColor;
     uAttribute = (oSelf.uCurrentColor & (uMask ^ 0xFF)) | (uColor & uMask) | (bUnderline and 0x8000 or 0);
-    assert KERNEL32.SetConsoleTextAttribute(oSelf.hStdOut, uAttribute), \
+    assert oKernel32.SetConsoleTextAttribute(oSelf.ohStdOut, uAttribute), \
         "SetConsoleTextAttribute(%d, %d) => Error %08X" % \
-        (oSelf.hStdOut, uAttribute, KERNEL32.GetLastError());
+        (oSelf.ohStdOut, uAttribute, oKernel32.GetLastError());
     # Track if the current color is not the original, so we know when to set it back.
     oSelf.bLastSetColorIsNotOriginal = uAttribute != oSelf.uOriginalColor;
   
   def __fWriteOutput(oSelf, sMessage):
-    dwCharsWritten = DWORD(0);
+    odwCharsWritten = DWORD(0);
     if oSelf.bStdOutIsConsole:
       sWriteFunctionName = "WriteConsoleW";
       if isinstance(sMessage, str):
         sMessage = mCP437.fsutoUnicode(sMessage); # Convert CP437 to Unicode
+      bUnicode = True;
     else:
       sWriteFunctionName = "WriteFile";
       if isinstance(sMessage, unicode):
         sMessage = mCP437.fsFromUnicode(sMessage); # Convert Unicode to CP437
-    fbWriteFunction = getattr(KERNEL32, sWriteFunctionName);
+      bUnicode = False;
+    fbWriteFunction = getattr(oKernel32, sWriteFunctionName);
     while sMessage:
       uCharsToWrite = min(len(sMessage), 10000);
-      assert fbWriteFunction(oSelf.hStdOut, sMessage[:uCharsToWrite], uCharsToWrite, POINTER(dwCharsWritten), None), \
-          "%s(%d, '...', %d, ..., NULL) => Error %08X" % \
-          (sWriteFunctionName, oSelf.hStdOut, uCharsToWrite, KERNEL32.GetLastError());
-      sMessage = sMessage[dwCharsWritten.value:];
+      oBuffer = foCreateBuffer(sMessage[:uCharsToWrite], bUnicode = bUnicode);
+      assert fbWriteFunction(
+        oSelf.ohStdOut,
+        oBuffer.foCreatePointer(PCWSTR if bUnicode else PCSTR),
+        uCharsToWrite,
+        odwCharsWritten.foCreatePointer(),
+        NULL
+      ), \
+          "%s(0x%X, 0x%X, 0x%X, 0x%X, NULL) => Error %08X" % \
+          (sWriteFunctionName, oSelf.ohStdOut.value, oBuffer.fuGetAddress(), uCharsToWrite, \
+          odwCharsWritten.fuGetAddress(), oKernel32.GetLastError());
+      sMessage = sMessage[odwCharsWritten.value:];
 
   def __fOutputHelper(oSelf, axCharsAndColors, bIsStatusMessage, uConvertTabsToSpaces, sPadding):
     ### !!!NOTE!!! axCharsAndColors will be modified by this function !!!NOTE!!! ###
@@ -278,8 +286,8 @@ class cConsole(object):
       oSelf.uLastProgress = uProgress;
   
   def fSetTitle(oSelf, sTitle):
-    assert KERNEL32.SetConsoleTitleW(sTitle), \
+    assert oKernel32.SetConsoleTitleW(sTitle), \
         "SetConsoleTitleW(%s) => Error %08X" % \
-        (repr(sTitle), KERNEL32.GetLastError());
+        (repr(sTitle), oKernel32.GetLastError());
   
 oConsole = cConsole();
