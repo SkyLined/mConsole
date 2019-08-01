@@ -32,8 +32,8 @@ for (sModuleName, sDownloadURL) in [
 sys.path = asOriginalSysPath;
 
 import mCP437;
-from mWindowsAPI.mDLLs import oKernel32;
 from mWindowsSDK import *;
+oKernel32 = foLoadKernel32DLL(); # We need this throughout the class, so might as well load it now.
 
 class cConsole(object):
   uColumnsForRedirectedOutput = 80;
