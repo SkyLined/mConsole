@@ -195,7 +195,7 @@ class cConsole(object):
         oSelf.uLastLineLength = 0;
     finally:
       oSelf.oLock.release();
-
+  
   def fPrint(oSelf, *axCharsAndColors, **dxFlags):
     for sFlag in dxFlags.keys():
       assert sFlag in ["uConvertTabsToSpaces", "sPadding"], \
@@ -207,7 +207,8 @@ class cConsole(object):
       sPadding = dxFlags.get("sPadding", None),
     );
     oSelf.sLastBar = None; # Any progress bar needs to be redrawn
-
+  fOutput = fPrint;
+  
   def fStatus(oSelf, *axCharsAndColors, **dxFlags):
     # Status messages are not shown if output is redirected.
     if not oSelf.bStdOutIsConsole: return;
