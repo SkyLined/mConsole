@@ -116,6 +116,7 @@ class cConsole(object):
     assert oSelf.bStdOutIsConsole or not bIsStatusMessage, \
         "Status messages should not be output when output is redirected.";
     oSelf.oLock.acquire();
+    axProcessedArguments = [];
     try:
       # Go to the start of the current line if needed
       if oSelf.uLastLineLength:
@@ -135,6 +136,7 @@ class cConsole(object):
             # elements in lists are processesed in order (this allows you to more easily generate output).
             axCharsAndColors = xCharsOrColor + axCharsAndColors;
           elif isinstance(xCharsOrColor, int) or isinstance(xCharsOrColor, long):
+            axProcessedArguments.append(xCharsOrColor);
             # integers and longs are interpreted as colors.
             if oSelf.bStdOutIsConsole: # If output is redirected, colors will not be set, so don't try
               if xCharsOrColor == -1:
@@ -143,9 +145,11 @@ class cConsole(object):
                 uColor = xCharsOrColor;
               oSelf.__fSetColor(uColor);
           else:
+            axProcessedArguments.append(xCharsOrColor);
             # strings are written to stdout
             assert isinstance(xCharsOrColor, str) or isinstance(xCharsOrColor, unicode), \
-                "You cannot print %s (type = %s) directly; it must be converted to a string" % (repr(xCharsOrColor), xCharsOrColor.__class__.__name__);
+                "You cannot print %s (type = %s) directly; it must be converted to a string (processed arguments = %s)" % \
+                (repr(xCharsOrColor), xCharsOrColor.__class__.__name__, repr(axProcessedArguments));
             if oSelf.bStdOutIsConsole:
               uCharsLeftOnLine = uColumns - uCharsOutput - 1;
             if uConvertTabsToSpaces:
