@@ -79,7 +79,7 @@ if oConsole.bStdOutIsConsole:
   # processed and this error is not detected.
   try:
     oConsole.fPrint(0x20000);
-  except:
+  except Exception:
     pass;
   else:
     raise AssertionFailure("Using a color number that is outside the value range did not cause an exception!");
