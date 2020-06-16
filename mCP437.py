@@ -41,7 +41,7 @@ for uCP437 in xrange(0x100):
   suUnicode = asuCP437_to_Unicode[uCP437];
   dsUnicode_to_CP437[suUnicode] = chr(uCP437);
 
-def fsutoUnicode(sCP437):
+def fsuToUnicode(sCP437):
   return u"".join([asuCP437_to_Unicode[ord(sChar)] for sChar in sCP437]);
 
 def fsFromUnicode(suUnicode):

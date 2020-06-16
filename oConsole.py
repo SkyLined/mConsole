@@ -7,20 +7,25 @@ oKernel32 = foLoadKernel32DLL(); # We need this throughout the class, so might a
 class cConsole(object):
   uColumnsForRedirectedOutput = 80;
   
-  def __init__(oSelf):
+  def __init__(oSelf, bCodepage437 = False):
     oSelf.oLock = threading.RLock();
     oSelf.uLastLineLength = 0;
     oSelf.ohStdOut = oKernel32.GetStdHandle(STD_OUTPUT_HANDLE);
     odwMode = DWORD(0);
     oSelf.bStdOutIsConsole = True if oKernel32.GetConsoleMode(oSelf.ohStdOut, odwMode.foCreatePointer()).value else False;
     oSelf.bByteOrderMarkWritten = False;
+    oSelf.sLastBar = None; # No progress bar is being shown
     if oSelf.bStdOutIsConsole:
       oSelf.uOriginalColor = oSelf.uCurrentColor;
       oSelf.uDefaultColor = 0;
       oSelf.uDefaultBarColor = 0xFF00 | (oSelf.uOriginalColor & 0xFF);
       oSelf.uDefaultProgressColor = 0xFF00 | ((oSelf.uOriginalColor & 0xF0) >> 4) | ((oSelf.uOriginalColor & 0x0F) << 4);
       oSelf.bLastSetColorIsNotOriginal = False;
-    oSelf.sLastBar = None; # No progress bar is being shown
+    else:
+      oSelf.bCodepage437 = bCodepage437;
+      if not bCodepage437:
+        # UTF-8 encoded output to file; write BOM (https://en.wikipedia.org/wiki/Byte_order_mark);
+        oSelf.__fWriteToFile("\xEF\xBB\xBF");
   
   def fLock(oSelf):
     oSelf.oLock.acquire();
@@ -36,7 +41,11 @@ class cConsole(object):
       if oSelf.bLastSetColorIsNotOriginal:
         oSelf.__fSetColor(oSelf.uOriginalColor);
       if oSelf.uLastLineLength:
-        oSelf.__fWriteOutput(u"\r" + u" " * oSelf.uLastLineLength + u"\r");
+        assert oSelf.bStdOutIsConsole, \
+            "This is unexpected!";
+        oSelf.__fCariageReturn();
+        oSelf.__fWriteOutput(u" " * oSelf.uLastLineLength);
+        oSelf.__fCariageReturn();
       oSelf.sLastBar = None; # Any progress bar needs to be redrawn
   
   def __foGetConsoleScreenBufferInfo(oSelf):
@@ -83,25 +92,43 @@ class cConsole(object):
     # Track if the current color is not the original, so we know when to set it back.
     oSelf.bLastSetColorIsNotOriginal = uAttribute != oSelf.uOriginalColor;
   
-  def __fWriteOutput(oSelf, sMessage):
-    odwCharsWritten = DWORD(0);
+  def __fWriteOutput(oSelf, sxMessage):
     if oSelf.bStdOutIsConsole:
-      sWriteFunctionName = "WriteConsoleW";
-      if isinstance(sMessage, str):
-        sMessage = mCP437.fsutoUnicode(sMessage); # Convert CP437 to Unicode
-      bUnicode = True;
+      # We always output Unicode to console, so convert ASCII strings to
+      # Unicode assuming CP437 encoding.
+      suMessage = mCP437.fsuToUnicode(sxMessage) if isinstance(sxMessage, str) else sxMessage;
+      oSelf.__fWriteToConsole(suMessage);
     else:
-      sWriteFunctionName = "WriteFile";
-      if isinstance(sMessage, unicode):
-        sMessage = mCP437.fsFromUnicode(sMessage); # Convert Unicode to CP437
-      bUnicode = False;
-    fbWriteFunction = getattr(oKernel32, sWriteFunctionName);
+      # We always output byte strings to file.
+      if oSelf.bCodepage437:
+        # The users was CP437 encoding, so convert Unicode:
+        sMessage = mCP437.fsFromUnicode(sxMessage) if isinstance(sxMessage, unicode) else sxMessage;
+      else:
+        # The user wants UTF-8 encoded Unicode strings, so convert ASCII to Unicode assuming CP437 encoding:
+        suMessage = mCP437.fsuToUnicode(sxMessage) if isinstance(sxMessage, str) else sxMessage;
+        # Now convert Unicode to UTF-8 encoded byte strings.
+        sMessage = suMessage.encode('utf-8', "backslashreplace");
+      oSelf.__fWriteToFile(sMessage);
+  
+  def __fCariageReturn(oSelf): # CR
+    assert oSelf.bStdOutIsConsole, \
+        "This is unexpected";
+    oSelf.__fWriteToConsole(u"\r");
+  
+  def __fLineFeed(oSelf): # LF
+    if oSelf.bStdOutIsConsole:
+      oSelf.__fWriteToConsole(u"\n");
+    else:
+      oSelf.__fWriteToFile("\n");
+  
+  def __fWriteToFile(oSelf, sMessage):
+    odwCharsWritten = DWORD(0);
     while sMessage:
       uCharsToWrite = min(len(sMessage), 10000);
-      oBuffer = foCreateBuffer(sMessage[:uCharsToWrite], bUnicode = bUnicode);
-      assert fbWriteFunction(
+      oBuffer = foCreateBuffer(sMessage[:uCharsToWrite], bUnicode = False);
+      assert oKernel32.WriteFile(
         oSelf.ohStdOut,
-        oBuffer.foCreatePointer(PCWSTR if bUnicode else PCSTR),
+        oBuffer.foCreatePointer(PCSTR),
         uCharsToWrite,
         odwCharsWritten.foCreatePointer(),
         NULL
@@ -110,7 +137,24 @@ class cConsole(object):
           (sWriteFunctionName, oSelf.ohStdOut.value, oBuffer.fuGetAddress(), uCharsToWrite, \
           odwCharsWritten.fuGetAddress(), oKernel32.GetLastError());
       sMessage = sMessage[odwCharsWritten.value:];
+  def __fWriteToConsole(oSelf, suMessage):
+    odwCharsWritten = DWORD(0);
+    while suMessage:
+      uCharsToWrite = min(len(suMessage), 10000);
+      oBuffer = foCreateBuffer(suMessage[:uCharsToWrite], bUnicode = True);
+      assert oKernel32.WriteConsoleW(
+        oSelf.ohStdOut,
+        oBuffer.foCreatePointer(PCWSTR),
+        uCharsToWrite,
+        odwCharsWritten.foCreatePointer(),
+        NULL
+      ), \
+          "%s(0x%X, 0x%X, 0x%X, 0x%X, NULL) => Error %08X" % \
+          (sWriteFunctionName, oSelf.ohStdOut.value, oBuffer.fuGetAddress(), uCharsToWrite, \
+          odwCharsWritten.fuGetAddress(), oKernel32.GetLastError());
+      suMessage = suMessage[odwCharsWritten.value:];
 
+  
   def __fOutputHelper(oSelf, axCharsAndColors, bIsStatusMessage, uConvertTabsToSpaces, sPadding):
     ### !!!NOTE!!! axCharsAndColors will be modified by this function !!!NOTE!!! ###
     assert oSelf.bStdOutIsConsole or not bIsStatusMessage, \
@@ -120,7 +164,7 @@ class cConsole(object):
     try:
       # Go to the start of the current line if needed
       if oSelf.uLastLineLength:
-        oSelf.__fWriteOutput(oSelf.bStdOutIsConsole and u"\r" or "\r");
+        oSelf.__fCariageReturn();
       uCharsOutput = 0;
       # setup colors if outputting to a console.
       if oSelf.bStdOutIsConsole:
@@ -191,11 +235,14 @@ class cConsole(object):
         # Then go back to the start of the line and move to the next line if this is not a status message.
         oSelf.__fWriteOutput("".join([
           uCharsOutput < oSelf.uLastLineLength and u" " * (oSelf.uLastLineLength - uCharsOutput) or "",
-          bIsStatusMessage and u"\r" or u"\r\n",
         ]));
         oSelf.uLastLineLength = bIsStatusMessage and uCharsOutput or 0;
+        if bIsStatusMessage:
+          oSelf.__fCariageReturn();
+        else:
+          oSelf.__fLineFeed();
       else:
-        oSelf.__fWriteOutput("\n");
+        oSelf.__fLineFeed();
         oSelf.uLastLineLength = 0;
     finally:
       oSelf.oLock.release();
@@ -260,7 +307,8 @@ class cConsole(object):
       oSelf.uLastProgress = uProgress;
   
   def fSetTitle(oSelf, sTitle):
-    assert oKernel32.SetConsoleTitleW(sTitle), \
+    oBuffer = foCreateBuffer(unicode(sTitle), bUnicode = True);
+    assert oKernel32.SetConsoleTitleW(oBuffer.foCreatePointer(PCWSTR)), \
         "SetConsoleTitleW(%s) => Error %08X" % \
         (repr(sTitle), oKernel32.GetLastError());
   
