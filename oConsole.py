@@ -274,7 +274,7 @@ class cConsole(object):
     );
     oSelf.sLastBar = None; # Any progress bar needs to be redrawn
   
-  def fProgressBar(oSelf, nProgress, sMessage = "", uProgressColor = None, uBarColor = None):
+  def fProgressBar(oSelf, nProgress, sMessage = "", bCenterMessage = True, uProgressColor = None, uBarColor = None):
     # Converting tabs to spaces in sMessage is not possible because this requires knowning which column each character
     # is going to be located. However, sMessage will be centered, so the location of each character depends on its
     # length, which we cannot know until after converting the tabs to spaces. This is a Catch-22 type issue.
@@ -286,7 +286,7 @@ class cConsole(object):
     assert nProgress >=0 and nProgress <= 1, \
         "Progress must be [0, 1], not %s" % nProgress;
     uBarWidth = oSelf.uWindowWidth - 1;
-    sBar = sMessage.center(uBarWidth);
+    sBar = sMessage.center(uBarWidth) if bCenterMessage else sMessage.ljust(uBarWidth);
     uProgress = long(oSelf.uWindowWidth * nProgress);
     # If this progress bar looks the same as the previous, we haven't made progress and won't show it.
     if (
