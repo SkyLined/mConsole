@@ -26,6 +26,15 @@ class cConsole(object):
       if not bCodepage437:
         # UTF-8 encoded output to file; write BOM (https://en.wikipedia.org/wiki/Byte_order_mark);
         oSelf.__fWriteToFile("\xEF\xBB\xBF");
+    oSelf.__a0sLog = None;
+  
+  def fEnableLog(oSelf):
+    if oSelf.__a0sLog is None:
+      oSelf.__a0sLog = [];
+  def fDisableLog(oSelf):
+    oSelf.__a0sLog = None;
+  def fa0sGetLog(oSelf):
+    return oSelf.__a0sLog[:] if oSelf.__a0sLog is not None else None;
   
   def fLock(oSelf):
     oSelf.oLock.acquire();
@@ -48,6 +57,7 @@ class cConsole(object):
         oSelf.__fCariageReturn();
       oSelf.sLastBar = None; # Any progress bar needs to be redrawn
   
+    oSelf.__a0sLog = None;
   def __foGetConsoleScreenBufferInfo(oSelf):
     assert oSelf.bStdOutIsConsole, \
         "Cannot get colors when output is redirected";
@@ -109,6 +119,8 @@ class cConsole(object):
         # Now convert Unicode to UTF-8 encoded byte strings.
         sMessage = suMessage.encode('utf-8', "backslashreplace");
       oSelf.__fWriteToFile(sMessage);
+      if oSelf.__a0sLog is not None:
+        oSelf.__a0sLog.append(sMessage);
   
   def __fCariageReturn(oSelf): # CR
     assert oSelf.bStdOutIsConsole, \
@@ -120,6 +132,8 @@ class cConsole(object):
       oSelf.__fWriteToConsole(u"\n");
     else:
       oSelf.__fWriteToFile("\n");
+    if oSelf.__a0sLog is not None:
+      oSelf.__a0sLog.append("\n");
   
   def __fWriteToFile(oSelf, sMessage):
     odwCharsWritten = DWORD(0);
