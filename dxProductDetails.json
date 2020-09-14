@@ -2,7 +2,10 @@
   "asDependentOnProductNames": [
     "mWindowsSDK"
   ], 
-  "asOptionalProductNames": [], 
+  "asOptionalProductNames": [
+    "cFileSystemItem",
+    "mDebugOutput"
+  ], 
   "oProductVersion": "2020-07-01 21:26", 
   "oRepository": {
     "sBranch": "master", 

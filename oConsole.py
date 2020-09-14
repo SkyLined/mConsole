@@ -4,6 +4,11 @@ import mCP437;
 from mWindowsSDK import *;
 oKernel32 = foLoadKernel32DLL(); # We need this throughout the class, so might as well load it now.
 
+try:
+  from cFileSystemItem import cFileSystemItem;
+except ImportError:
+  cFileSystemItem = None;
+
 class cConsole(object):
   uColumnsForRedirectedOutput = 80;
   
@@ -25,7 +30,8 @@ class cConsole(object):
     else:
       if not bCodepage437:
         # UTF-8 encoded output to file; write BOM (https://en.wikipedia.org/wiki/Byte_order_mark);
-        oSelf.__fWriteToFile("\xEF\xBB\xBF");
+        oSelf.__fWriteToStdOutFile("\xEF\xBB\xBF");
+    oSelf.__aoCopyOutputToFileSystemItems = [];
     oSelf.__a0sLog = None;
   
   def fEnableLog(oSelf):
@@ -35,6 +41,29 @@ class cConsole(object):
     oSelf.__a0sLog = None;
   def fa0sGetLog(oSelf):
     return oSelf.__a0sLog[:] if oSelf.__a0sLog is not None else None;
+  
+  def fbCopyOutputToFilePath(oSelf, sFilePath, bOverwrite = False, bIncludeLog = True):
+    assert cFileSystemItem, \
+        "The cFileSystemItem module is required to copy console output to files!";
+    oFileSystemItem = cFileSystemItem(sFilePath);
+    if oFileSystemItem.fbIsFolder():
+      return False; # We will never overwrite a folder.
+    elif oFileSystemItem.fbIsFile():
+      if not bOverwrite:
+        return False;
+      assert oFileSystemItem.fbOpenAsFile(bWritable = True, bAppend = False, bParseZipFiles = True, bThrowErrors = True), \
+         "Cannot open existing file %s!" % (sFilePath,);
+    else:
+     assert oFileSystemItem.fbCreateAsFile(bCreateParents = True, bParseZipFiles = True, bKeepOpen = True, bThrowErrors = True), \
+        "Cannot create file %s!" % (sFilePath,);
+    assert oFileSystemItem.fbWrite("\xEF\xBB\xBF", bKeepOpen = True, bParseZipFiles = True, bThrowErrors = True), \
+        "Cannot write to file %s!" % (sFilePath,);
+    if bIncludeLog and oSelf.__a0sLog is not None:
+      for sLog in oSelf.__a0sLog:
+        assert oFileSystemItem.fbWrite(sLog, bKeepOpen = True, bParseZipFiles = True, bThrowErrors = True), \
+            "Cannot write to file %s!" % (sFilePath,);
+    oSelf.__aoCopyOutputToFileSystemItems.append(oFileSystemItem);
+    return True;
   
   def fLock(oSelf):
     oSelf.oLock.acquire();
@@ -53,11 +82,14 @@ class cConsole(object):
         assert oSelf.bStdOutIsConsole, \
             "This is unexpected!";
         oSelf.__fCariageReturn();
-        oSelf.__fWriteOutput(u" " * oSelf.uLastLineLength);
+        oSelf.__fWriteOutput(u" " * oSelf.uLastLineLength, bIsStatusMessage = True);
         oSelf.__fCariageReturn();
       oSelf.sLastBar = None; # Any progress bar needs to be redrawn
-  
+    for oFileSystemItem in oSelf.__aoCopyOutputToFileSystemItems:
+      oFileSystemItem.fbClose(bThrowErrors = True);
+    oSelf.__aoCopyOutputToFileSystemItems = [];
     oSelf.__a0sLog = None;
+    
   def __foGetConsoleScreenBufferInfo(oSelf):
     assert oSelf.bStdOutIsConsole, \
         "Cannot get colors when output is redirected";
@@ -102,13 +134,15 @@ class cConsole(object):
     # Track if the current color is not the original, so we know when to set it back.
     oSelf.bLastSetColorIsNotOriginal = uAttribute != oSelf.uOriginalColor;
   
-  def __fWriteOutput(oSelf, sxMessage):
+  def __fWriteOutput(oSelf, sxMessage, bIsStatusMessage):
     if oSelf.bStdOutIsConsole:
       # We always output Unicode to console, so convert ASCII strings to
       # Unicode assuming CP437 encoding.
       suMessage = mCP437.fsuToUnicode(sxMessage) if isinstance(sxMessage, str) else sxMessage;
-      oSelf.__fWriteToConsole(suMessage);
-    else:
+      oSelf.__fWriteToStdOutConsole(suMessage);
+    if bIsStatusMessage:
+      return; # status messages are not logged, written when stdout is redirected or copied to files.
+    if not oSelf.bStdOutIsConsole or oSelf.__aoCopyOutputToFileSystemItems or oSelf.__a0sLog is not None:
       # We always output byte strings to file.
       if oSelf.bCodepage437:
         # The users was CP437 encoding, so convert Unicode:
@@ -118,24 +152,29 @@ class cConsole(object):
         suMessage = mCP437.fsuToUnicode(sxMessage) if isinstance(sxMessage, str) else sxMessage;
         # Now convert Unicode to UTF-8 encoded byte strings.
         sMessage = suMessage.encode('utf-8', "backslashreplace");
-      oSelf.__fWriteToFile(sMessage);
+      if not oSelf.bStdOutIsConsole:
+        oSelf.__fWriteToStdOutFile(sMessage);
+      for oFileSystemItem in oSelf.__aoCopyOutputToFileSystemItems:
+        oFileSystemItem.fbWrite(sMessage, bKeepOpen = True, bParseZipFiles = True, bThrowErrors = True);
       if oSelf.__a0sLog is not None:
         oSelf.__a0sLog.append(sMessage);
   
   def __fCariageReturn(oSelf): # CR
     assert oSelf.bStdOutIsConsole, \
         "This is unexpected";
-    oSelf.__fWriteToConsole(u"\r");
+    oSelf.__fWriteToStdOutConsole(u"\r");
   
   def __fLineFeed(oSelf): # LF
     if oSelf.bStdOutIsConsole:
-      oSelf.__fWriteToConsole(u"\n");
+      oSelf.__fWriteToStdOutConsole(u"\n");
     else:
-      oSelf.__fWriteToFile("\n");
+      oSelf.__fWriteToStdOutFile("\n");
+    for oFileSystemItem in oSelf.__aoCopyOutputToFileSystemItems:
+      oFileSystemItem.fbWrite("\n", bKeepOpen = True, bParseZipFiles = True, bThrowErrors = True);
     if oSelf.__a0sLog is not None:
       oSelf.__a0sLog.append("\n");
   
-  def __fWriteToFile(oSelf, sMessage):
+  def __fWriteToStdOutFile(oSelf, sMessage):
     odwCharsWritten = DWORD(0);
     while sMessage:
       uCharsToWrite = min(len(sMessage), 10000);
@@ -151,7 +190,7 @@ class cConsole(object):
           (sWriteFunctionName, oSelf.ohStdOut.value, oBuffer.fuGetAddress(), uCharsToWrite, \
           odwCharsWritten.fuGetAddress(), oKernel32.GetLastError());
       sMessage = sMessage[odwCharsWritten.value:];
-  def __fWriteToConsole(oSelf, suMessage):
+  def __fWriteToStdOutConsole(oSelf, suMessage):
     odwCharsWritten = DWORD(0);
     while suMessage:
       uCharsToWrite = min(len(suMessage), 10000);
@@ -231,7 +270,7 @@ class cConsole(object):
               if bIsStatusMessage and len(sMessage) > uCharsLeftOnLine:
                 # Do not let a status message span multiple lines.
                 sMessage = sMessage[:uCharsLeftOnLine];
-            oSelf.__fWriteOutput(sMessage);
+            oSelf.__fWriteOutput(sMessage, bIsStatusMessage);
             uCharsOutput += len(sMessage);
             if bIsStatusMessage and uCharsOutput == uColumns - 1:
               # We've reached the end of the line and the remained of the arguments will not be output.
@@ -239,7 +278,7 @@ class cConsole(object):
         if sPadding and uCharsOutput < uColumns:
           uPaddingColumns = uColumns - uCharsOutput - 1;
           sLinePadding = (sPadding * (uPaddingColumns / len(sPadding)))[:uPaddingColumns];
-          oSelf.__fWriteOutput(sLinePadding);
+          oSelf.__fWriteOutput(sLinePadding, bIsStatusMessage);
           uCharsOutput += uPaddingColumns;
       finally:
         if oSelf.bStdOutIsConsole and oSelf.bLastSetColorIsNotOriginal:
@@ -249,7 +288,7 @@ class cConsole(object):
         # Then go back to the start of the line and move to the next line if this is not a status message.
         oSelf.__fWriteOutput("".join([
           uCharsOutput < oSelf.uLastLineLength and u" " * (oSelf.uLastLineLength - uCharsOutput) or "",
-        ]));
+        ]), bIsStatusMessage);
         oSelf.uLastLineLength = bIsStatusMessage and uCharsOutput or 0;
         if bIsStatusMessage:
           oSelf.__fCariageReturn();
