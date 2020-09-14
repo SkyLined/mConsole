@@ -47,6 +47,26 @@ try:
     else:
       raise AssertionFailure("Using a color number that is outside the value range did not cause an exception!");
   
+  # Check log functionality:
+  a0sLog = oConsole.fa0sGetLog();
+  assert a0sLog is None, \
+      "Log contains unexpected value %s" % (repr(a0sLog),);
+  oConsole.fEnableLog();
+  a0sLog = oConsole.fa0sGetLog();
+  assert a0sLog == [], \
+      "Log contains unexpected value %s" % (repr(a0sLog),);
+  oConsole.fStatus("This should not be in the log");
+  assert a0sLog == [], \
+      "Log contains unexpected value %s" % (repr(a0sLog),);
+  oConsole.fPrint("This should be in the log");
+  a0sLog = oConsole.fa0sGetLog();
+  assert a0sLog == ["This should be in the log"], \
+      "Log contains unexpected value %s" % (repr(a0sLog),);
+  oConsole.fDisableLog();
+  a0sLog = oConsole.fa0sGetLog();
+  assert a0sLog is None, \
+      "Log contains unexpected value %s" % (repr(a0sLog),);
+  
   oConsole.fPrint("Tests succeeded");
   oConsole.fStatus("This should not be visible");
   oConsole.fCleanup();
