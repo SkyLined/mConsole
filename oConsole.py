@@ -15,6 +15,7 @@ class cConsole(object):
     oSelf.bStdOutIsConsole = True if oKernel32.GetConsoleMode(oSelf.ohStdOut, odwMode.foCreatePointer()).value else False;
     oSelf.bByteOrderMarkWritten = False;
     oSelf.sLastBar = None; # No progress bar is being shown
+    oSelf.bCodepage437 = bCodepage437;
     if oSelf.bStdOutIsConsole:
       oSelf.uOriginalColor = oSelf.uCurrentColor;
       oSelf.uDefaultColor = 0;
@@ -22,7 +23,6 @@ class cConsole(object):
       oSelf.uDefaultProgressColor = 0xFF00 | ((oSelf.uOriginalColor & 0xF0) >> 4) | ((oSelf.uOriginalColor & 0x0F) << 4);
       oSelf.bLastSetColorIsNotOriginal = False;
     else:
-      oSelf.bCodepage437 = bCodepage437;
       if not bCodepage437:
         # UTF-8 encoded output to file; write BOM (https://en.wikipedia.org/wiki/Byte_order_mark);
         oSelf.__fWriteToFile("\xEF\xBB\xBF");
