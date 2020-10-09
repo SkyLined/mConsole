@@ -81,9 +81,10 @@ class cConsole(object):
       if oSelf.uLastLineLength:
         assert oSelf.bStdOutIsConsole, \
             "This is unexpected!";
-        oSelf.__fCariageReturn();
+        oSelf.__fBackToStartOfLine();
         oSelf.__fWriteOutput(u" " * oSelf.uLastLineLength, bIsStatusMessage = True);
-        oSelf.__fCariageReturn();
+        oSelf.__fBackToStartOfLine();
+        oSelf.uLastLineLength = 0;
       oSelf.sLastBar = None; # Any progress bar needs to be redrawn
     for oFileSystemItem in oSelf.__aoCopyOutputToFileSystemItems:
       oFileSystemItem.fbClose(bThrowErrors = True);
@@ -217,7 +218,7 @@ class cConsole(object):
     try:
       # Go to the start of the current line if needed
       if oSelf.uLastLineLength:
-        oSelf.__fCariageReturn();
+        oSelf.__fBackToStartOfLine();
       uCharsOutput = 0;
       # setup colors if outputting to a console.
       if oSelf.bStdOutIsConsole:
@@ -289,10 +290,10 @@ class cConsole(object):
         oSelf.__fWriteOutput("".join([
           uCharsOutput < oSelf.uLastLineLength and u" " * (oSelf.uLastLineLength - uCharsOutput) or "",
         ]), True);
-        oSelf.uLastLineLength = bIsStatusMessage and uCharsOutput or 0;
         if bIsStatusMessage:
-          oSelf.__fBackToStartOfLine();
+          oSelf.uLastLineLength = uCharsOutput
         else:
+          oSelf.uLastLineLength = 0;
           oSelf.__fNextLine();
       else:
         oSelf.__fNextLine();
