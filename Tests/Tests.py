@@ -60,7 +60,7 @@ try:
       "Log contains unexpected value %s" % (repr(a0sLog),);
   oConsole.fPrint("This should be in the log");
   a0sLog = oConsole.fa0sGetLog();
-  assert a0sLog == ["This should be in the log"], \
+  assert a0sLog == ["This should be in the log", "\r\n"], \
       "Log contains unexpected value %s" % (repr(a0sLog),);
   oConsole.fDisableLog();
   a0sLog = oConsole.fa0sGetLog();
