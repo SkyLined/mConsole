@@ -159,20 +159,20 @@ class cConsole(object):
       if oSelf.__a0sLog is not None:
         oSelf.__a0sLog.append(sMessage);
   
-  def __fCariageReturn(oSelf): # CR
+  def __fBackToStartOfLine(oSelf): # CR
     assert oSelf.bStdOutIsConsole, \
         "This is unexpected";
     oSelf.__fWriteToStdOutConsole(u"\r");
   
-  def __fLineFeed(oSelf): # LF
+  def __fNextLine(oSelf): # LF
     if oSelf.bStdOutIsConsole:
       oSelf.__fWriteToStdOutConsole(u"\n");
     else:
       oSelf.__fWriteToStdOutFile("\n");
     for oFileSystemItem in oSelf.__aoCopyOutputToFileSystemItems:
-      oFileSystemItem.fbWrite("\n", bKeepOpen = True, bParseZipFiles = True, bThrowErrors = True);
+      oFileSystemItem.fbWrite("\r\n", bKeepOpen = True, bParseZipFiles = True, bThrowErrors = True);
     if oSelf.__a0sLog is not None:
-      oSelf.__a0sLog.append("\n");
+      oSelf.__a0sLog.append("\r\n");
   
   def __fWriteToStdOutFile(oSelf, sMessage):
     odwCharsWritten = DWORD(0);
@@ -291,11 +291,11 @@ class cConsole(object):
         ]), True);
         oSelf.uLastLineLength = bIsStatusMessage and uCharsOutput or 0;
         if bIsStatusMessage:
-          oSelf.__fCariageReturn();
+          oSelf.__fBackToStartOfLine();
         else:
-          oSelf.__fLineFeed();
+          oSelf.__fNextLine();
       else:
-        oSelf.__fLineFeed();
+        oSelf.__fNextLine();
         oSelf.uLastLineLength = 0;
     finally:
       oSelf.oLock.release();
