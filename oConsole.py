@@ -288,7 +288,7 @@ class cConsole(object):
         # Then go back to the start of the line and move to the next line if this is not a status message.
         oSelf.__fWriteOutput("".join([
           uCharsOutput < oSelf.uLastLineLength and u" " * (oSelf.uLastLineLength - uCharsOutput) or "",
-        ]), bIsStatusMessage);
+        ]), True);
         oSelf.uLastLineLength = bIsStatusMessage and uCharsOutput or 0;
         if bIsStatusMessage:
           oSelf.__fCariageReturn();
