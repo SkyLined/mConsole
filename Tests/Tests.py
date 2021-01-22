@@ -1,6 +1,12 @@
 from fTestDependencies import fTestDependencies;
 fTestDependencies();
 
+import time;
+
+# Some tests require visual checks. This delay is used to slow these tests down
+# in order to do so.
+nDelayInSecondsForVisualChecks = 1.0
+
 try:
   import mDebugOutput;
 except:
@@ -17,9 +23,12 @@ try:
     oConsole.fPrint(*asLineOutput);
   
   # Use a large value, as this will be very slow unless the progress bar is not drawn when it's not changed as it should be.
-  uLoops = 10000;
-  for uCurrent in xrange(uLoops):
-    nProgress = uCurrent / float(uLoops);
+  uStartTime = time.time();
+  uEndTime = uStartTime + nDelayInSecondsForVisualChecks;
+  while 1:
+    nProgress = (time.time() - uStartTime) / nDelayInSecondsForVisualChecks;
+    if nProgress > 1:
+      break;
     oConsole.fProgressBar(nProgress, "Screen width = %d" % (oConsole.uWindowWidth or 100));
   
   if oConsole.uWindowWidth is not None:
@@ -69,6 +78,15 @@ try:
   
   oConsole.fPrint("Tests succeeded");
   oConsole.fStatus("This should not be visible");
+  oConsole.fMinimizeWindow();
+  oConsole.fPrint("Window should now be minimized");
+  time.sleep(1);
+  oConsole.fMaximizeWindow();
+  oConsole.fPrint("Window should now be maximize");
+  time.sleep(1);
+  oConsole.fRestoreWindow();
+  oConsole.fPrint("Window should now be normal");
+  time.sleep(1);
   oConsole.fCleanup();
   
   oConsole.fOutput("+ Done.");

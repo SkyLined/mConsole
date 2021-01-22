@@ -14,6 +14,7 @@ class cConsole(object):
   
   def __init__(oSelf, bCodepage437 = False):
     oSelf.oLock = threading.RLock();
+
     oSelf.uLastLineLength = 0;
     oSelf.ohStdOut = oKernel32.GetStdHandle(STD_OUTPUT_HANDLE);
     odwMode = DWORD(0);
@@ -33,6 +34,13 @@ class cConsole(object):
         oSelf.__fWriteToStdOutFile("\xEF\xBB\xBF");
     oSelf.__aoCopyOutputToFileSystemItems = [];
     oSelf.__a0sLog = None;
+    oSelf.__oUser32 = None; # Lazy loaded as not every program needs it.
+  
+  @property
+  def oUser32(oSelf):
+    if oSelf.__oUser32 is None:
+      oSelf.__oUser32 = foLoadUser32DLL(); # We need this throughout the class, so might as well load it now.
+    return oSelf.__oUser32;
   
   def fEnableLog(oSelf):
     if oSelf.__a0sLog is None:
@@ -123,7 +131,7 @@ class cConsole(object):
   def __fSetColor(oSelf, uColor):
     assert oSelf.bStdOutIsConsole, \
         "Cannot set colors when output is redirected";
-
+    
     uMask = (uColor >> 8) & 0xFF;
     bUnderline = (uColor >> 16);
     assert bUnderline in [0, 1], \
@@ -207,7 +215,6 @@ class cConsole(object):
           (sWriteFunctionName, oSelf.ohStdOut.value, oBuffer.fuGetAddress(), uCharsToWrite, \
           odwCharsWritten.fuGetAddress(), oKernel32.GetLastError());
       suMessage = suMessage[odwCharsWritten.value:];
-
   
   def __fOutputHelper(oSelf, axCharsAndColors, bIsStatusMessage, uConvertTabsToSpaces, sPadding):
     ### !!!NOTE!!! axCharsAndColors will be modified by this function !!!NOTE!!! ###
@@ -338,7 +345,7 @@ class cConsole(object):
     if uProgressColor is None:
       uProgressColor = oSelf.uDefaultProgressColor;
     assert nProgress >=0 and nProgress <= 1, \
-        "Progress must be [0, 1], not %s" % nProgress;
+        "Progress must be [0, 1], not %s" % repr(nProgress);
     uBarWidth = oSelf.uWindowWidth - 1;
     sBar = sMessage.center(uBarWidth) if bCenterMessage else sMessage.ljust(uBarWidth);
     uProgress = long(oSelf.uWindowWidth * nProgress);
@@ -363,7 +370,29 @@ class cConsole(object):
   def fSetTitle(oSelf, sTitle):
     oBuffer = foCreateBuffer(unicode(sTitle), bUnicode = True);
     assert oKernel32.SetConsoleTitleW(oBuffer.foCreatePointer(PCWSTR)), \
-        "SetConsoleTitleW(%s) => Error %08X" % \
-        (repr(sTitle), oKernel32.GetLastError());
+        "SetConsoleTitleW(%s) => Error %08X" % (repr(sTitle), oKernel32.GetLastError());
   
-oConsole = cConsole();
+  def fHideWindow(oSelf):
+    oSelf.__fSetWindowShowCommand(SW_HIDE);
+  def fShowWindow(oSelf, bActivate = False):
+    oSelf.__fSetWindowShowCommand(SW_SHOW if bActivate else SW_SHOWNA);
+  def fMinimizeWindow(oSelf):
+    oSelf.__fSetWindowShowCommand(SW_SHOWMINIMIZED);
+  def fMaximizeWindow(oSelf):
+    oSelf.__fSetWindowShowCommand(SW_SHOWMAXIMIZED);
+  def fRestoreWindow(oSelf):
+    oSelf.__fSetWindowShowCommand(SW_SHOWNORMAL);
+  def __fSetWindowShowCommand(oSelf, uShowCommand):
+    oHWindow = oKernel32.GetConsoleWindow();
+    assert oHWindow, \
+        "GetConsoleWindow() => Error %08X" % oKernel32.GetLastError();
+    oWindowPlacement = WINDOWPLACEMENT();
+    oWindowPlacement.length = UINT(oWindowPlacement.fuGetSize());
+    assert oSelf.oUser32.GetWindowPlacement(oHWindow, oWindowPlacement.foCreatePointer()), \
+        "user32.GetWindowPlacement(%08X, %08X) => Error %08X" % \
+            (oHWindow.value, oWindowPlacement.fuGetAddress(), oKernel32.GetLastError());
+    oWindowPlacement.flags = WPF_ASYNCWINDOWPLACEMENT;
+    oWindowPlacement.showCmd = uShowCommand;
+    assert oSelf.oUser32.SetWindowPlacement(oHWindow, oWindowPlacement.foCreatePointer()), \
+        "user32.SetWindowPlacement(%08X, %08X) => Error %08X" % \
+            (oHWindow.value, oWindowPlacement.fuGetAddress(), oKernel32.GetLastError());
