@@ -1,4 +1,1 @@
-from .cConsole import cConsole;
-
-oConsole = cConsole();
-
+from .oConsole import oConsole;
