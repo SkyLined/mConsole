@@ -187,32 +187,32 @@ class cConsole(object):
     odwCharsWritten = DWORD(0);
     while sMessage:
       uCharsToWrite = min(len(sMessage), 10000);
-      oBuffer = foCreateBuffer(sMessage[:uCharsToWrite], bUnicode = False);
+      poBuffer = PCSTR(sMessage[:uCharsToWrite]);
       assert oKernel32.WriteFile(
         oSelf.ohStdOut,
-        oBuffer.foCreatePointer(PCSTR),
+        poBuffer,
         uCharsToWrite,
         odwCharsWritten.foCreatePointer(),
         NULL
       ), \
           "%s(0x%X, 0x%X, 0x%X, 0x%X, NULL) => Error %08X" % \
-          (sWriteFunctionName, oSelf.ohStdOut.value, oBuffer.fuGetAddress(), uCharsToWrite, \
+          (sWriteFunctionName, oSelf.ohStdOut, poBuffer, uCharsToWrite, \
           odwCharsWritten.fuGetAddress(), oKernel32.GetLastError());
       sMessage = sMessage[odwCharsWritten.value:];
   def __fWriteToStdOutConsole(oSelf, suMessage):
     odwCharsWritten = DWORD(0);
     while suMessage:
       uCharsToWrite = min(len(suMessage), 10000);
-      oBuffer = foCreateBuffer(suMessage[:uCharsToWrite], bUnicode = True);
+      poBuffer = PCWSTR(suMessage[:uCharsToWrite]);
       assert oKernel32.WriteConsoleW(
         oSelf.ohStdOut,
-        oBuffer.foCreatePointer(PCWSTR),
+        poBuffer,
         uCharsToWrite,
         odwCharsWritten.foCreatePointer(),
         NULL
       ), \
           "%s(0x%X, 0x%X, 0x%X, 0x%X, NULL) => Error %08X" % \
-          (sWriteFunctionName, oSelf.ohStdOut.value, oBuffer.fuGetAddress(), uCharsToWrite, \
+          (sWriteFunctionName, oSelf.ohStdOut, poBuffer, uCharsToWrite, \
           odwCharsWritten.fuGetAddress(), oKernel32.GetLastError());
       suMessage = suMessage[odwCharsWritten.value:];
   
@@ -368,9 +368,9 @@ class cConsole(object):
       oSelf.uLastProgress = uProgress;
   
   def fSetTitle(oSelf, sTitle):
-    oBuffer = foCreateBuffer(unicode(sTitle), bUnicode = True);
-    assert oKernel32.SetConsoleTitleW(oBuffer.foCreatePointer(PCWSTR)), \
-        "SetConsoleTitleW(%s) => Error %08X" % (repr(sTitle), oKernel32.GetLastError());
+    poBuffer = PCWSTR(sTitle);
+    assert oKernel32.SetConsoleTitleW(poBuffer), \
+        "SetConsoleTitleW(%s) => Error %08X" % (repr(poBuffer), oKernel32.GetLastError());
   
   def fHideWindow(oSelf):
     oSelf.__fSetWindowShowCommand(SW_HIDE);
