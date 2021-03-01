@@ -12,15 +12,13 @@
     "Python module"
   ], 
   "asPythonApplicationNames": [], 
-  "oProductVersion": "2021-03-01 09:13", 
+  "oProductVersion": "2021-03-01 18:35", 
   "oRepository": {
     "sBranch": "master", 
     "sRepositoryName": "oConsole", 
     "sType": "GitHub", 
     "sUserName": "SkyLined"
   }, 
-  "oTrialPeriodDuration": null, 
-  "sLicenseServerURL": null, 
   "sProductAuthor": "SkyLined", 
   "sProductName": "oConsole", 
   "sProductURL": "https://github.com/SkyLined/oConsole", 
