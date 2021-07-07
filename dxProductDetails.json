@@ -1,26 +1,25 @@
 {
-  "asDependentOnProductNames": [
-    "mWindowsSDK"
-  ], 
-  "asJavaScriptModuleNames": [], 
-  "asOptionalProductNames": [
-    "cFileSystemItem", 
+  "a0sDebugAdditionalProductNames": [
+    "mFileSystemItem",
     "mDebugOutput"
-  ], 
-  "asPHPModuleNames": [], 
+  ],
+  "a0sDependentOnProductNames": [
+    "mWindowsSDK"
+  ],
   "asProductTypes": [
     "Python module"
-  ], 
-  "asPythonApplicationNames": [], 
-  "oProductVersion": "2021-04-15 11:36", 
-  "oRepository": {
-    "sBranch": "master", 
-    "sRepositoryName": "oConsole", 
-    "sType": "GitHub", 
-    "sUserName": "SkyLined"
-  }, 
-  "sProductAuthor": "SkyLined", 
-  "sProductName": "oConsole", 
-  "sProductURL": "https://github.com/SkyLined/oConsole", 
-  "sPythonModuleName": "oConsole"
+  ],
+  "o0Repository": {
+    "sStructureVersion": "2021-07-02 11:16",
+    "sType": "GitHub",
+    "sbBranch": "master",
+    "sbRepositoryName": "mConsole",
+    "sbUserName": "SkyLined"
+  },
+  "oProductVersion": "2021-07-07 12:48",
+  "s0PythonModuleName": "mConsole",
+  "sProductAuthor": "SkyLined",
+  "sProductName": "mConsole",
+  "sStructureVersion": "2021-07-02 11:16",
+  "sb0ProductURL": "https://github.com/SkyLined/mConsole"
 }

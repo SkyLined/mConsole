@@ -2,7 +2,7 @@
 # convert CP437 to unicode (index range 0-255 => unicode char) and a dict to
 # convert Unicode to CP437 (unicode char => CP437 char). These are used by the
 # fsuCP437_to_Unicode and fsUnicode_to_CP437 functions respectively.
-asuCP437_to_Unicode = [isinstance(x, str) and unicode(x) or unichr(x) for x in [
+asUnicodeCharMapCP437 = [isinstance(x, str) and str(x) or chr(x) for x in [
   0,      9786,   9787,   9829,   9830,   9827,   9824,   8226,
   9688,   9675,   9689,   9794,   9792,   9834,   9835,   9788,
   9658,   9668,   8597,   8252,   182,    167,    9644,   8616,
@@ -36,13 +36,15 @@ asuCP437_to_Unicode = [isinstance(x, str) and unicode(x) or unichr(x) for x in [
   8801,   177,    8805,   8804,   8992,   8993,   247,    8776,
   176,    8729,   183,    8730,   8319,   178,    9632,   160,
 ]];
-dsUnicode_to_CP437 = {};
-for uCP437 in xrange(0x100):
-  suUnicode = asuCP437_to_Unicode[uCP437];
-  dsUnicode_to_CP437[suUnicode] = chr(uCP437);
+dsbCP437Byte_by_sUnicodeChar = {};
+for uCP437Byte in range(0x100):
+  sUnicodeChar = asUnicodeCharMapCP437[uCP437Byte];
+  dsbCP437Byte_by_sUnicodeChar[sUnicodeChar] = bytes(uCP437Byte);
 
-def fsuToUnicode(sCP437):
-  return u"".join([asuCP437_to_Unicode[ord(sChar)] for sChar in sCP437]);
+def fsBytesToUnicode(sbCP437Bytes):
+  return "".join([asUnicodeCharMapCP437[ord(sbByte)] for sbByte in sbCP437Bytes]);
+fsUnicodeFromBytes = fsBytesToUnicode;
 
-def fsFromUnicode(suUnicode):
-  return "".join([dsUnicode_to_CP437.get(suChar, "?") for suChar in suUnicode]);
+def fsbUnicodeToBytes(sUnicode):
+  return b"".join([dsbCP437Byte_by_sUnicodeChar.get(sUnicodeChar, b"?") for sUnicodeChar in sUnicode]);
+fsbBytesFromUnicode = fsbUnicodeToBytes;

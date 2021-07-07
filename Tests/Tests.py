@@ -5,22 +5,25 @@ import time;
 
 # Some tests require visual checks. This delay is used to slow these tests down
 # in order to do so.
-nDelayInSecondsForVisualChecks = 1.0
+nDelayInSecondsForVisualChecks = 0.5;
+
+try: # mDebugOutput use is Optional
+  import mDebugOutput as m0DebugOutput;
+except ModuleNotFoundError as oException:
+  if oException.args[0] != "No module named 'mDebugOutput'":
+    raise;
+  m0DebugOutput = None;
 
 try:
-  import mDebugOutput;
-except:
-  mDebugOutput = None;
-try:
   #Import the test subject
-  from oConsole import oConsole;
+  from mConsole import oConsole;
   
-  for uBackground in xrange(0, 0x10):
+  for uBackground in range(0, 0x10):
     asLineOutput = [];
-    for uForeground in xrange(0, 0x10, 1):
+    for uForeground in range(0, 0x10, 1):
       uColor = uForeground + uBackground * 0x10;
       asLineOutput.extend([0xFF00 + uColor, "##"]);
-    oConsole.fPrint(*asLineOutput);
+    oConsole.fOutput(*asLineOutput);
   
   # Use a large value, as this will be very slow unless the progress bar is not drawn when it's not changed as it should be.
   uStartTime = time.time();
@@ -43,14 +46,14 @@ try:
     assert oConsole.uLastLineLength == uTestMessageLength, \
         "Expected last line to be %d chars, got %d" % (uTestMessageLength, oConsole.uLastLineLength);
   
-  oConsole.fPrint(0xFF1E, "Padding test", sPadding = " -");
-  oConsole.fPrint("This tests ", 0x10000, "underlined", 0, " text.");
+  oConsole.fOutput(0xFF1E, "Padding test", sPadding = " -");
+  oConsole.fOutput("This tests ", 0x10000, "underlined", 0, " text.");
   if oConsole.bStdOutIsConsole:
     # Colors are only processed when outputting to a console. If you specify an invalid color, the code assumes you
     # accidentally output a number without first converting it to a string. If output is redirected, the color is not
     # processed and this error is not detected.
     try:
-      oConsole.fPrint(0x20000);
+      oConsole.fOutput(0x20000);
     except Exception:
       pass;
     else:
@@ -67,7 +70,7 @@ try:
   oConsole.fStatus("This should not be in the log");
   assert a0sLog == [], \
       "Log contains unexpected value %s" % (repr(a0sLog),);
-  oConsole.fPrint("This should be in the log");
+  oConsole.fOutput("This should be in the log");
   a0sLog = oConsole.fa0sGetLog();
   assert a0sLog == ["This should be in the log", "\r\n"], \
       "Log contains unexpected value %s" % (repr(a0sLog),);
@@ -76,22 +79,22 @@ try:
   assert a0sLog is None, \
       "Log contains unexpected value %s" % (repr(a0sLog),);
   
-  oConsole.fPrint("Tests succeeded");
+  oConsole.fOutput("Tests succeeded");
   oConsole.fStatus("This should not be visible");
   oConsole.fMinimizeWindow();
-  oConsole.fPrint("Window should now be minimized");
+  oConsole.fOutput("Window should now be minimized");
   time.sleep(1);
   oConsole.fMaximizeWindow();
-  oConsole.fPrint("Window should now be maximize");
+  oConsole.fOutput("Window should now be maximize");
   time.sleep(1);
   oConsole.fRestoreWindow();
-  oConsole.fPrint("Window should now be normal");
+  oConsole.fOutput("Window should now be normal");
   time.sleep(1);
   oConsole.fCleanup();
   
   oConsole.fOutput("+ Done.");
   
 except Exception as oException:
-  if mDebugOutput:
-    mDebugOutput.fTerminateWithException(oException, bShowStacksForAllThread = True);
+  if m0DebugOutput:
+    m0DebugOutput.fTerminateWithException(oException, bShowStacksForAllThread = True);
   raise;

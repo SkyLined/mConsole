@@ -1,1 +1,4 @@
-from .oConsole import oConsole;
+from .fInitializeProduct import fInitializeProduct;
+fInitializeProduct();
+
+from .mExports import *;
