@@ -14,10 +14,18 @@ class cFileSystemItemStandIn(object):
   def sWindowsPath(oSelf):
     return oSelf.sPath;
   
-  def fbIsFile(oSelf):
+  def fbIsFile(oSelf, bParseZipFiles = False, bThrowErrors = True):
+    assert not bParseZipFiles, \
+        "Parsing zip files is not supported by %s" % oSelf.__class__.__name__;
+    assert bThrowErrors, \
+        "Errors are always thrown by %s" % oSelf.__class__.__name__;
     return os.path.isfile(oSelf.sPath);
   
-  def fbIsFolder(oSelf):
+  def fbIsFolder(oSelf, bParseZipFiles = False, bThrowErrors = True):
+    assert not bParseZipFiles, \
+        "Parsing zip files is not supported by %s" % oSelf.__class__.__name__;
+    assert bThrowErrors, \
+        "Errors are always thrown by %s" % oSelf.__class__.__name__;
     return os.path.isdir(oSelf.sPath);
   
   def fbSetAsCurrentWorkingDirectory(oSelf):
