@@ -24,6 +24,7 @@ class cConsole(object):
       oSelf.uDefaultColor = 0;
       oSelf.uDefaultBarColor = 0xFF00 | (oSelf.uOriginalColor & 0xFF);
       oSelf.uDefaultProgressColor = 0xFF00 | ((oSelf.uOriginalColor & 0xF0) >> 4) | ((oSelf.uOriginalColor & 0x0F) << 4);
+      oSelf.uDefaultSubProgressColor = oSelf.uDefaultProgressColor ^ 0x88; # Bright = dark, Dark = bright
       oSelf.bLastSetColorIsNotOriginal = False;
     oSelf.__aoCopyOutputToFileSystemItems = [];
     oSelf.__a0sLog = None;
@@ -336,37 +337,48 @@ class cConsole(object):
     );
     oSelf.sLastBar = None; # Any progress bar needs to be redrawn
   
-  def fProgressBar(oSelf, nProgress, sMessage = "", bCenterMessage = True, uProgressColor = None, uBarColor = None):
+  def fProgressBar(oSelf, nProgress, sMessage = "", bCenterMessage = True, uProgressColor = None, uBarColor = None, nSubProgress = 0, u0SubProgressColor = None):
     # Converting tabs to spaces in sMessage is not possible because this requires knowning which column each character
     # is going to be located. However, sMessage will be centered, so the location of each character depends on its
     # length, which we cannot know until after converting the tabs to spaces. This is a Catch-22 type issue.
     if not oSelf.bStdOutIsConsole: return;
     if uBarColor is None:
       uBarColor = oSelf.uDefaultBarColor;
-    if uProgressColor is None:
-      uProgressColor = oSelf.uDefaultProgressColor;
+    uProgressColor = oSelf.uDefaultProgressColor if uProgressColor is None else uProgressColor;
+    uSubProgressColor = oSelf.uDefaultSubProgressColor if u0SubProgressColor is None else u0SubProgressColor;
     assert nProgress >=0 and nProgress <= 1, \
-        "Progress must be [0, 1], not %s" % repr(nProgress);
+        "nProgress must be [0, 1], not %s" % repr(nProgress);
+    assert nSubProgress >=0 and nSubProgress <= 1, \
+        "nSubProgress must be [0, 1], not %s" % repr(nSubProgress);
     uBarWidth = oSelf.uWindowWidth - 1;
     sBar = sMessage.center(uBarWidth) if bCenterMessage else sMessage.ljust(uBarWidth);
-    uProgress = int(oSelf.uWindowWidth * nProgress);
+    uProgressWidth = int(uBarWidth * nProgress);
+    uSubProgressWidth = int(uBarWidth * nProgress * nSubProgress);
     # If this progress bar looks the same as the previous, we haven't made progress and won't show it.
     if (
       sBar != oSelf.sLastBar
+      or uProgressWidth != oSelf.uLastProgressWidth
+      or uSubProgressWidth != oSelf.uLastSubProgressWidth
       or uBarColor != oSelf.uLastBarColor
       or uProgressColor != oSelf.uLastProgressColor
-      or uProgress != oSelf.uLastProgress
+      or uSubProgressColor != oSelf.uLastSubProgressColor
     ):
       oSelf.__fOutputHelper(
-        [uProgressColor, sBar[:uProgress], uBarColor, sBar[uProgress:]],
+        [
+          uSubProgressColor, sBar[:uSubProgressWidth],
+          uProgressColor, sBar[uSubProgressWidth : uProgressWidth],
+          uBarColor, sBar[uProgressWidth:],
+        ],
         bIsStatusMessage = True,
         uConvertTabsToSpaces = 0,
         sPadding = None,
       );
+      oSelf.sLastBar = sBar;
+      oSelf.uLastProgressWidth = uProgressWidth;
+      oSelf.uLastSubProgressWidth = uSubProgressWidth;
       oSelf.uLastBarColor = uBarColor;
       oSelf.uLastProgressColor = uProgressColor;
-      oSelf.sLastBar = sBar;
-      oSelf.uLastProgress = uProgress;
+      oSelf.uLastSubProgressColor = uSubProgressColor;
   
   def fSetTitle(oSelf, sTitle):
     poBuffer = PCWSTR(sTitle);
