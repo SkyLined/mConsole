@@ -36,6 +36,9 @@ class cConsole(object):
   
   def __fsbBytesFromString(oSelf, sMessage):
     return mCP437.fsbBytesFromUnicode(sMessage) if oSelf.__bOutputCodepage437ToStdOut else sMessage.encode('utf-8', "backslashreplace");
+  def __fsStringFromBytes(oSelf, sbMessage):
+    return mCP437.fsUnicodeFromBytes(sbMessage) if oSelf.__bOutputCodepage437ToStdOut else str(sbMessage, 'utf-8', "backslashreplace");
+    
   
   @property
   def oUser32(oSelf):
@@ -248,7 +251,7 @@ class cConsole(object):
               oSelf.__fSetColor(uColor);
           else:
             if isinstance(xCharsOrColor, bytes):
-              xCharsOrColor = fsBytesToUnicode(xCharsOrColor);
+              xCharsOrColor = oSelf.__fsStringFromBytes(xCharsOrColor)
             axProcessedArguments.append(xCharsOrColor);
             # strings are written to stdout
             assert isinstance(xCharsOrColor, str), \
