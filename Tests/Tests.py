@@ -14,6 +14,7 @@ except ModuleNotFoundError as oException:
     raise;
   m0DebugOutput = None;
 
+guExitCodeInternalError = 1; # Use standard value;
 try:
   #Import the test subject
   from mConsole import oConsole;
@@ -96,5 +97,5 @@ try:
   
 except Exception as oException:
   if m0DebugOutput:
-    m0DebugOutput.fTerminateWithException(oException, bShowStacksForAllThread = True);
+    m0DebugOutput.fTerminateWithException(oException, guExitCodeInternalError, bShowStacksForAllThread = True);
   raise;
