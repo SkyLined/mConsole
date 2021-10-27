@@ -1,0 +1,2 @@
+This file is here to signal that tests should be run both with regular console
+output as well as output redirected to a file.
