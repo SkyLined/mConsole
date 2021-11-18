@@ -1,10 +1,10 @@
 import math, threading;
 
 from mWindowsSDK import *;
+from mWindowsSDK.mKernel32 import oKernel32DLL;
 
 from . import mCP437;
 from .fcFileSystemItemLoader import fcFileSystemItemLoader;
-oKernel32 = foLoadKernel32DLL(); # We need this throughout the class, so might as well load it now.
 
 class cConsole(object):
   uColumnsForRedirectedOutput = 80;
@@ -13,9 +13,9 @@ class cConsole(object):
     oSelf.oLock = threading.RLock();
     
     oSelf.uLastLineLength = 0;
-    oSelf.ohStdOut = oKernel32.GetStdHandle(STD_OUTPUT_HANDLE);
+    oSelf.ohStdOut = oKernel32DLL.GetStdHandle(STD_OUTPUT_HANDLE);
     odwMode = DWORD(0);
-    oSelf.bStdOutIsConsole = True if oKernel32.GetConsoleMode(oSelf.ohStdOut, odwMode.foCreatePointer()).value else False;
+    oSelf.bStdOutIsConsole = True if oKernel32DLL.GetConsoleMode(oSelf.ohStdOut, odwMode.foCreatePointer()).value else False;
     oSelf.bByteOrderMarkWritten = False;
     oSelf.sLastBar = None; # No progress bar is being shown
     oSelf.__bOutputCodepage437ToStdOut = None; # Use the default (which is not to use CP437 but output utf-8 instead)
@@ -108,9 +108,9 @@ class cConsole(object):
     assert oSelf.bStdOutIsConsole, \
         "Cannot get colors when output is redirected";
     oConsoleScreenBufferInfo = CONSOLE_SCREEN_BUFFER_INFO()
-    assert oKernel32.GetConsoleScreenBufferInfo(oSelf.ohStdOut, oConsoleScreenBufferInfo.foCreatePointer()), \
+    assert oKernel32DLL.GetConsoleScreenBufferInfo(oSelf.ohStdOut, oConsoleScreenBufferInfo.foCreatePointer()), \
         "GetConsoleScreenBufferInfo(%d, ...) => Error %08X" % \
-        (oSelf.ohStdOut, oKernel32.GetLastError());
+        (oSelf.ohStdOut, oKernel32DLL.GetLastError());
     return oConsoleScreenBufferInfo;
   
   @property
@@ -141,9 +141,9 @@ class cConsole(object):
     assert bUnderline in [0, 1], \
         "You cannot use color 0x%X; maybe you are trying to print a number without converting it to a string?" % uColor;
     uAttribute = (oSelf.uCurrentColor & (uMask ^ 0xFF)) | (uColor & uMask) | (bUnderline and 0x8000 or 0);
-    assert oKernel32.SetConsoleTextAttribute(oSelf.ohStdOut, uAttribute), \
+    assert oKernel32DLL.SetConsoleTextAttribute(oSelf.ohStdOut, uAttribute), \
         "SetConsoleTextAttribute(%d, %d) => Error %08X" % \
-        (oSelf.ohStdOut, uAttribute, oKernel32.GetLastError());
+        (oSelf.ohStdOut, uAttribute, oKernel32DLL.GetLastError());
     # Track if the current color is not the original, so we know when to set it back.
     oSelf.bLastSetColorIsNotOriginal = uAttribute != oSelf.uOriginalColor;
   
@@ -182,16 +182,16 @@ class cConsole(object):
     while uIndex < len(sbMessage):
       uCharsToWrite = min(len(sbMessage) - uIndex, 10000);
       poBuffer = PCSTR(sbMessage[uIndex : uIndex + uCharsToWrite]);
-      assert oKernel32.WriteFile(
+      assert oKernel32DLL.WriteFile(
         oSelf.ohStdOut,
-        poBuffer,
+        poBuffer.foCastTo(PVOID),
         uCharsToWrite,
         odwCharsWritten.foCreatePointer(),
         NULL
       ), \
           "%s(0x%X, 0x%X, 0x%X, 0x%X, NULL) => Error %08X" % \
           (sWriteFunctionName, oSelf.ohStdOut, poBuffer, uCharsToWrite, \
-          odwCharsWritten.fuGetAddress(), oKernel32.GetLastError());
+          odwCharsWritten.fuGetAddress(), oKernel32DLL.GetLastError());
       uIndex += odwCharsWritten.value;
   def __fWriteToStdOutConsole(oSelf, sMessage):
     odwCharsWritten = DWORD(0);
@@ -199,7 +199,7 @@ class cConsole(object):
     while uIndex < len(sMessage):
       uCharsToWrite = min(len(sMessage) - uIndex, 10000);
       poBuffer = PCWSTR(sMessage[uIndex : uIndex + uCharsToWrite]);
-      assert oKernel32.WriteConsoleW(
+      assert oKernel32DLL.WriteConsoleW(
         oSelf.ohStdOut,
         poBuffer,
         uCharsToWrite,
@@ -208,7 +208,7 @@ class cConsole(object):
       ), \
           "%s(0x%X, 0x%X, 0x%X, 0x%X, NULL) => Error %08X" % \
           (sWriteFunctionName, oSelf.ohStdOut, poBuffer, uCharsToWrite, \
-          odwCharsWritten.fuGetAddress(), oKernel32.GetLastError());
+          odwCharsWritten.fuGetAddress(), oKernel32DLL.GetLastError());
       uIndex += odwCharsWritten.value;
   
   def __fOutputHelper(oSelf, axCharsAndColors, bIsStatusMessage, uConvertTabsToSpaces, sPadding):
@@ -382,8 +382,8 @@ class cConsole(object):
   
   def fSetTitle(oSelf, sTitle):
     poBuffer = PCWSTR(sTitle);
-    assert oKernel32.SetConsoleTitleW(poBuffer), \
-        "SetConsoleTitleW(%s) => Error %08X" % (repr(poBuffer), oKernel32.GetLastError());
+    assert oKernel32DLL.SetConsoleTitleW(poBuffer), \
+        "SetConsoleTitleW(%s) => Error %08X" % (repr(poBuffer), oKernel32DLL.GetLastError());
   
   def fHideWindow(oSelf):
     oSelf.__fSetWindowShowCommand(SW_HIDE);
@@ -396,16 +396,16 @@ class cConsole(object):
   def fRestoreWindow(oSelf):
     oSelf.__fSetWindowShowCommand(SW_SHOWNORMAL);
   def __fSetWindowShowCommand(oSelf, uShowCommand):
-    oHWindow = oKernel32.GetConsoleWindow();
+    oHWindow = oKernel32DLL.GetConsoleWindow();
     assert oHWindow, \
-        "GetConsoleWindow() => Error %08X" % oKernel32.GetLastError();
+        "GetConsoleWindow() => Error %08X" % oKernel32DLL.GetLastError();
     oWindowPlacement = WINDOWPLACEMENT();
     oWindowPlacement.length = UINT(oWindowPlacement.fuGetSize());
     assert oSelf.oUser32.GetWindowPlacement(oHWindow, oWindowPlacement.foCreatePointer()), \
         "user32.GetWindowPlacement(%08X, %08X) => Error %08X" % \
-            (oHWindow.value, oWindowPlacement.fuGetAddress(), oKernel32.GetLastError());
+            (oHWindow.value, oWindowPlacement.fuGetAddress(), oKernel32DLL.GetLastError());
     oWindowPlacement.flags = WPF_ASYNCWINDOWPLACEMENT;
     oWindowPlacement.showCmd = uShowCommand;
     assert oSelf.oUser32.SetWindowPlacement(oHWindow, oWindowPlacement.foCreatePointer()), \
         "user32.SetWindowPlacement(%08X, %08X) => Error %08X" % \
-            (oHWindow.value, oWindowPlacement.fuGetAddress(), oKernel32.GetLastError());
+            (oHWindow.value, oWindowPlacement.fuGetAddress(), oKernel32DLL.GetLastError());
