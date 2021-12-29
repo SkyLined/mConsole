@@ -84,20 +84,23 @@ class cConsole(object):
   def fUnlock(oSelf):
     oSelf.oLock.release();
   
+  def __fCleanupCurrentLine(oSelf):
+    if oSelf.bLastSetColorIsNotOriginal:
+      oSelf.__fSetColor(oSelf.uOriginalColor);
+    if oSelf.uLastLineLength:
+      assert oSelf.bStdOutIsConsole, \
+          "This is unexpected!";
+      oSelf.__fBackToStartOfLine();
+      oSelf.__fWriteOutput(" " * oSelf.uLastLineLength, bIsStatusMessage = True);
+      oSelf.__fBackToStartOfLine();
+      oSelf.uLastLineLength = 0;
+  
   def fCleanup(oSelf):
     # If we are outputting to a console and the last set color is not the original color, the user must have
     # interrupted Python: set the color back to the original color the console will look as expected.
     # Also, if the last output was a status message, we need to clean it up.
     if oSelf.bStdOutIsConsole:
-      if oSelf.bLastSetColorIsNotOriginal:
-        oSelf.__fSetColor(oSelf.uOriginalColor);
-      if oSelf.uLastLineLength:
-        assert oSelf.bStdOutIsConsole, \
-            "This is unexpected!";
-        oSelf.__fBackToStartOfLine();
-        oSelf.__fWriteOutput(" " * oSelf.uLastLineLength, bIsStatusMessage = True);
-        oSelf.__fBackToStartOfLine();
-        oSelf.uLastLineLength = 0;
+      oSelf.__fCleanupCurrentLine();
       oSelf.sLastBar = None; # Any progress bar needs to be redrawn
     for oFileSystemItem in oSelf.__aoCopyOutputToFileSystemItems:
       oFileSystemItem.fbClose(bThrowErrors = True);
@@ -224,9 +227,8 @@ class cConsole(object):
     oSelf.oLock.acquire();
     axProcessedArguments = [];
     try:
-      # Go to the start of the current line if needed
-      if oSelf.uLastLineLength:
-        oSelf.__fBackToStartOfLine();
+      if oSelf.bStdOutIsConsole:
+        oSelf.__fCleanupCurrentLine();
       uCharsOutput = 0;
       # setup colors if outputting to a console.
       if oSelf.bStdOutIsConsole:
