@@ -4,7 +4,6 @@ class cFileSystemItemStandIn(object):
   bSupportsZipFiles = False;
   def __init__(oSelf, sPath):
     oSelf.sPath = sPath;
-    oSelf.oZipRoot = None;
   
   @property
   def sName(oSelf):
@@ -14,16 +13,12 @@ class cFileSystemItemStandIn(object):
   def sWindowsPath(oSelf):
     return oSelf.sPath;
   
-  def fbIsFile(oSelf, bParseZipFiles = False, bThrowErrors = True):
-    assert not bParseZipFiles, \
-        "Parsing zip files is not supported by %s" % oSelf.__class__.__name__;
+  def fbIsFile(oSelf, bThrowErrors = True):
     assert bThrowErrors, \
         "Errors are always thrown by %s" % oSelf.__class__.__name__;
     return os.path.isfile(oSelf.sPath);
   
-  def fbIsFolder(oSelf, bParseZipFiles = False, bThrowErrors = True):
-    assert not bParseZipFiles, \
-        "Parsing zip files is not supported by %s" % oSelf.__class__.__name__;
+  def fbIsFolder(oSelf, bThrowErrors = True):
     assert bThrowErrors, \
         "Errors are always thrown by %s" % oSelf.__class__.__name__;
     return os.path.isdir(oSelf.sPath);
@@ -41,28 +36,45 @@ class cFileSystemItemStandIn(object):
   def fsGetRelativePathTo(oSelf, oDescendant):
     return os.path.relpath(oDescendant.sPath, oSelf.sPath);
   
-  def foGetChild(oSelf, sName, bMustBeFile = False, bMustBeFolder = False, bParseZipFiles = False, bThrowErrors = True):
-    assert not bParseZipFiles, \
-        "Parsing zip files is not supported by %s" % oSelf.__class__.__name__;
+  def foGetChild(oSelf, sName, bMustBeFile = False, bMustBeFolder = False):
+    return oSelf.foGetDescendant(
+      sName,
+      bMustBeFile = bMustBeFile,
+      bMustBeFolder = bMustBeFolder,
+    );
+  def fo0GetChild(oSelf, sName, bMustBeFile = False, bMustBeFolder = False, bThrowErrors = True):
     assert bThrowErrors, \
         "Errors are always thrown by %s" % oSelf.__class__.__name__;
-    return oSelf.foGetDescendant(sName, bParseZipFiles = bParseZipFiles, bThrowErrors = bThrowErrors);
+    return oSelf.foGetDescendant(
+      sName,
+      bMustBeFile = bMustBeFile,
+      bMustBeFolder = bMustBeFolder,
+    );
   
-  def faoGetChildren(oSelf, bMustBeFile = False, bMustBeFolder = False, bParseZipFiles = False, bThrowErrors = True):
-    assert not bParseZipFiles, \
-        "Parsing zip files is not supported by %s" % oSelf.__class__.__name__;
+  def faoGetChildren(oSelf, bMustBeFile = False, bMustBeFolder = False):
+    return oSelf.fa0oGetChildren(
+      bMustBeFile = bMustBeFile,
+      bMustBeFolder = bMustBeFolder,
+      bThrowErrors = True,
+    );
+  def fa0oGetChildren(oSelf, bMustBeFile = False, bMustBeFolder = False, bThrowErrors = True):
     assert bThrowErrors, \
         "Errors are always thrown by %s" % oSelf.__class__.__name__;
     return [
       oChild for oChild in [
-        oSelf.foGetChild(sName, bParseZipFiles = bParseZipFiles, bThrowErrors = bThrowErrors)
+        oSelf.foGetChild(sName)
         for sName in os.listdir(oSelf.sPath)
       ] if (not bMustBeFile or oChild.fbIsFile()) and (not bMustBeFolder or oChild.fbIsFolder())
     ];
   
-  def foGetDescendant(oSelf, sRelativePath, bMustBeFile = False, bMustBeFolder = False, bParseZipFiles = False, bThrowErrors = True):
-    assert not bParseZipFiles, \
-        "Parsing zip files is not supported by %s" % oSelf.__class__.__name__;
+  def foGetDescendant(oSelf, sRelativePath, bMustBeFile = False, bMustBeFolder = False):
+    return oSelf.fo0GetDescendant(
+      sRelativePath,
+      bMustBeFile = bMustBeFile,
+      bMustBeFolder = bMustBeFolder,
+      bThrowErrors = True,
+    );
+  def fo0GetDescendant(oSelf, sRelativePath, bMustBeFile = False, bMustBeFolder = False, bThrowErrors = True):
     assert bThrowErrors, \
         "Errors are always thrown by %s" % oSelf.__class__.__name__;
     oDescendant = oSelf.__class__(os.path.join(oSelf.sPath, sRelativePath));
@@ -72,40 +84,46 @@ class cFileSystemItemStandIn(object):
         "%s is not a folder!" % oDescendant;
     return oDescendant;
   
-  def faoGetDescendants(oSelf, bMustBeFile = False, bMustBeFolder = False, bParseZipFiles = False, bThrowErrors = True):
-    assert not bParseZipFiles, \
-        "Parsing zip files is not supported by %s" % oSelf.__class__.__name__;
+  def faoGetDescendants(oSelf, bMustBeFile = False, bMustBeFolder = False):
+    return oSelf.fa0oGetDescendants(
+      bMustBeFile = bMustBeFile,
+      bMustBeFolder = bMustBeFolder,
+      bThrowErrors = True,
+    );
+  def fa0oGetDescendants(oSelf, bMustBeFile = False, bMustBeFolder = False, bThrowErrors = True):
     assert bThrowErrors, \
         "Errors are always thrown by %s" % oSelf.__class__.__name__;
-    aoChildren = oSelf.faoGetChildren(bMustBeFolder = bMustBeFolder, bParseZipFiles = bParseZipFiles, bThrowErrors = bThrowErrors);
-    aoDescendants = [oChild for oChild in aoChildren if (
-      bMustBeFolder or not bMustBeFile or oChild.fbIsFile()
-    )];
-    for oChild in aoChildren:
-      if bMustBeFolder or oChild.fbIsFolder():
-        aoDescendants += oChild.faoGetDescendants(bMustBeFile, bMustBeFolder);
+    a0oChildren = oSelf.fa0oGetChildren(bThrowErrors = bThrowErrors);
+    if a0oChildren is None:
+      return None;
+    aoDescendants = [];
+    for oChild in a0oChildren:
+      if oChild.fbIsFolder():
+        if not bMustBeFile:
+          aoDescendants.append(oChild);
+        aoDescendants += oChild.fa0oGetDescendants(
+          bMustBeFile = bMustBeFile,
+          bMustBeFolder = bMustBeFolder,
+          bThrowErrors = bThrowErrors,
+        ) or [];
+      elif not bMustBeFolder:
+        aoDescendants.append(oChild);
     return aoDescendants;
   
-  def fsbRead(oSelf, bParseZipFiles = False, bThrowErrors = True):
-    assert not bParseZipFiles, \
-        "Parsing zip files is not supported by %s" % oSelf.__class__.__name__;
+  def fsbRead(oSelf, bThrowErrors = True):
     assert bThrowErrors, \
         "Errors are always thrown by %s" % oSelf.__class__.__name__;
     with open(oSelf.sPath, "rb") as oFile:
       return oFile.read();
   
-  def fbWrite(oSelf, sbContent, bParseZipFiles = False, bThrowErrors = True):
-    assert not bParseZipFiles, \
-        "Parsing zip files is not supported by %s" % oSelf.__class__.__name__;
+  def fbWrite(oSelf, sbContent, bThrowErrors = True):
     assert bThrowErrors, \
         "Errors are always thrown by %s" % oSelf.__class__.__name__;
     with open(oSelf.sPath, "wb") as oFile:
       oFile.write(sbContent);
     return True;
   
-  def fbDelete(oSelf, bParseZipFiles = False, bThrowErrors = True):
-    assert not bParseZipFiles, \
-        "Parsing zip files is not supported by %s" % oSelf.__class__.__name__;
+  def fbDelete(oSelf, bThrowErrors = True):
     assert bThrowErrors, \
         "Errors are always thrown by %s" % oSelf.__class__.__name__;
     if oSelf.fbIsFile():
