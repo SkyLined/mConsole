@@ -110,7 +110,10 @@ class cFileSystemItemStandIn(object):
         aoDescendants.append(oChild);
     return aoDescendants;
   
-  def fsbRead(oSelf, bThrowErrors = True):
+  def fsbRead(oSelf):
+    with open(oSelf.sPath, "rb") as oFile:
+      return oFile.read();
+  def fsb0Read(oSelf, bThrowErrors = True):
     assert bThrowErrors, \
         "Errors are always thrown by %s" % oSelf.__class__.__name__;
     with open(oSelf.sPath, "rb") as oFile:
