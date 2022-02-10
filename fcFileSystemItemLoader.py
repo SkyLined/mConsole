@@ -52,7 +52,7 @@ class cFileSystemItemStandIn(object):
     return True;
     
   @property
-  def oParent(oSelf):
+  def o0Parent(oSelf):
     sParentPath = os.path.dirname(oSelf.sPath);
     return oSelf.__class__(sParentPath) if sParentPath != oSelf.sPath else None;
   
@@ -65,12 +65,12 @@ class cFileSystemItemStandIn(object):
       bThrowErrors = True,
     );
   def fbCreateAsFolder(oSelf, bCreateParents = False, bThrowErrors = False):
-    if oSelf.oParent and not oSelf.oParent.fbExists(bThrowErrors = bThrowErrors):
+    if oSelf.o0Parent and not oSelf.o0Parent.fbExists(bThrowErrors = bThrowErrors):
       if not bCreateParents:
         assert not bThrowErrors, \
             "Cannot create folder %s when its parent does not exist!" % oSelf.sPath;
         return False;
-      if not oSelf.oParent.fbCreateAsParent(bThrowErrors = bThrowErrors):
+      if not oSelf.o0Parent or not oSelf.o0Parent.fbCreateAsParent(bThrowErrors = bThrowErrors):
         return False;
     try:
       os.makedirs(oSelf.sWindowsPath);
@@ -90,7 +90,7 @@ class cFileSystemItemStandIn(object):
     );
   def fbCreateAsFile(oSelf, sbData = b"", bCreateParents = False, bThrowErrors = False):
     try:
-      assert oSelf.oParent, \
+      assert oSelf.o0Parent, \
           "Cannot create file %s as a root node!" % oSelf.sPath;
       assert not oSelf.fbIsFolder(bThrowErrors = bThrowErrors), \
           "Cannot create file %s if it already exists as a folder!" % oSelf.sPath;
@@ -98,12 +98,12 @@ class cFileSystemItemStandIn(object):
       if bThrowErrors:
         raise;
       return False;
-    if not oSelf.oParent.fbExists(bThrowErrors = bThrowErrors):
+    if not oSelf.o0Parent.fbExists(bThrowErrors = bThrowErrors):
       if not bCreateParents:
         assert not bThrowErrors, \
             "Cannot create file %s when its parent does not exist!" % oSelf.sPath;
         return False;
-      if not oSelf.oParent.fbCreateAsParent(bThrowErrors = bThrowErrors):
+      if not oSelf.o0Parent.fbCreateAsParent(bThrowErrors = bThrowErrors):
         return False;
     try:
       with open(oSelf.sWindowsPath, "wb") as o0PyFile:
