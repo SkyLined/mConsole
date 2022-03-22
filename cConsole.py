@@ -58,23 +58,23 @@ class cConsole(object):
   def fbCopyOutputToFilePath(oSelf, sFilePath, bOverwrite = False, bIncludeLog = True, bThrowErrors = True):
     cFileSystemItem = fcFileSystemItemLoader();
     oFileSystemItem = cFileSystemItem(sFilePath);
+    bFileExists = oFileSystemItem.fbIsFile();
     if oFileSystemItem.fbIsFolder():
       return False; # We will never overwrite a folder.
-    elif oFileSystemItem.fbIsFile():
-      if not bOverwrite:
-        return False;
-      assert oFileSystemItem.fbOpenAsFile(bWritable = True, bAppend = False, bParseZipFiles = True, bThrowErrors = bThrowErrors), \
-         "Cannot open existing file %s!" % (sFilePath,);
-    else:
-     assert oFileSystemItem.fbCreateAsFile(bCreateParents = True, bParseZipFiles = True, bKeepOpen = True, bThrowErrors = bThrowErrors), \
-        "Cannot create file %s!" % (sFilePath,);
-    assert oFileSystemItem.fbWrite(b"\xEF\xBB\xBF", bKeepOpen = True, bParseZipFiles = True, bThrowErrors = bThrowErrors), \
-        "Cannot write to file %s!" % (sFilePath,);
+    elif bFileExists and not bOverwrite:
+      assert not bThrowErrors, \
+          "Cannot copy output to %s: the file already exists" % sFilePath;
+      return False;
+    sbData = b"" if oSelf.__bOutputCodepage437ToStdOut else b"\xEF\xBB\xBF"; # Write BOM if needed.
     if bIncludeLog and oSelf.__a0sLog is not None:
       for sLog in oSelf.__a0sLog:
-        sbLog = oSelf.__fsbBytesFromString(sLog);
-        assert oFileSystemItem.fbWrite(sbLog, bKeepOpen = True, bParseZipFiles = True, bThrowErrors = bThrowErrors), \
-            "Cannot write to file %s!" % (sFilePath,);
+        sbData += oSelf.__fsbBytesFromString(sLog);
+    if bFileExists:
+      if not oFileSystemItem.fbWrite(sbData, bAppend = False, bThrowErrors = bThrowErrors):
+        return False;
+    else:
+      if not oFileSystemItem.fbCreateAsFile(sbData, bCreateParents = True, bThrowErrors = bThrowErrors):
+        return False;
     oSelf.__aoCopyOutputToFileSystemItems.append(oFileSystemItem);
     return True;
   
@@ -102,8 +102,6 @@ class cConsole(object):
     if oSelf.bStdOutIsConsole:
       oSelf.__fCleanupCurrentLine();
       oSelf.sLastBar = None; # Any progress bar needs to be redrawn
-    for oFileSystemItem in oSelf.__aoCopyOutputToFileSystemItems:
-      oFileSystemItem.fbClose(bThrowErrors = True);
     oSelf.__aoCopyOutputToFileSystemItems = [];
     oSelf.__a0sLog = None;
     
@@ -160,7 +158,7 @@ class cConsole(object):
       if not oSelf.bStdOutIsConsole:
         oSelf.__fWriteToStdOutFile(sbMessage);
       for oFileSystemItem in oSelf.__aoCopyOutputToFileSystemItems:
-        oFileSystemItem.fbWrite(sbMessage, bKeepOpen = True, bParseZipFiles = True, bThrowErrors = True);
+        oFileSystemItem.fWrite(sbMessage, bAppend = True);
     if oSelf.__a0sLog is not None:
       oSelf.__a0sLog.append(sMessage);
   
@@ -175,7 +173,7 @@ class cConsole(object):
     else:
       oSelf.__fWriteToStdOutFile(b"\n");
     for oFileSystemItem in oSelf.__aoCopyOutputToFileSystemItems:
-      oFileSystemItem.fbWrite(b"\r\n", bKeepOpen = True, bParseZipFiles = True, bThrowErrors = True);
+      oFileSystemItem.fWrite(b"\r\n", bAppend = True);
     if oSelf.__a0sLog is not None:
       oSelf.__a0sLog.append("\r\n");
   
