@@ -6,6 +6,17 @@ from mWindowsSDK.mKernel32 import oKernel32DLL;
 from . import mCP437;
 from .fcFileSystemItemLoader import fcFileSystemItemLoader;
 
+def fsGetTextFromCharsAndColors(*axCharsAndColors):
+  def fAssertUnhandled(xCharsAndColors):
+    raise AssertionError("Cannot process %s" % repr(xCharsAndColors));
+  return "".join([
+    xCharsAndColors if isinstance(xCharsAndColors, str) else
+        "" if isinstance(xCharsAndColors, int) else
+        fsGetTextFromCharsAndColors(*xCharsAndColors) if isinstance(xCharsAndColors, list) else
+        fAssertUnhandled(xCharsAndColors)
+    for xCharsAndColors in axCharsAndColors
+  ]);
+
 class cConsole(object):
   uColumnsForRedirectedOutput = 80;
   
@@ -337,10 +348,11 @@ class cConsole(object):
     );
     oSelf.sLastBar = None; # Any progress bar needs to be redrawn
   
-  def fProgressBar(oSelf, nProgress, sMessage = "", bCenterMessage = True, uProgressColor = None, uBarColor = None, nSubProgress = 0, u0SubProgressColor = None):
+  def fProgressBar(oSelf, nProgress, *axCharsAndColors, bCenterMessage = True, uProgressColor = None, uBarColor = None, nSubProgress = 0, u0SubProgressColor = None):
     # Converting tabs to spaces in sMessage is not possible because this requires knowning which column each character
     # is going to be located. However, sMessage will be centered, so the location of each character depends on its
     # length, which we cannot know until after converting the tabs to spaces. This is a Catch-22 type issue.
+    sMessage = fsGetTextFromCharsAndColors(*axCharsAndColors);
     if not oSelf.bStdOutIsConsole: return;
     if uBarColor is None:
       uBarColor = oSelf.uDefaultBarColor;
@@ -380,7 +392,8 @@ class cConsole(object):
       oSelf.uLastProgressColor = uProgressColor;
       oSelf.uLastSubProgressColor = uSubProgressColor;
   
-  def fSetTitle(oSelf, sTitle):
+  def fSetTitle(oSelf, *axCharsAndColors):
+    sTitle = fsGetTextFromCharsAndColors(*axCharsAndColors);
     poBuffer = PCWSTR(sTitle);
     assert oKernel32DLL.SetConsoleTitleW(poBuffer), \
         "SetConsoleTitleW(%s) => Error %08X" % (repr(poBuffer), oKernel32DLL.GetLastError());
