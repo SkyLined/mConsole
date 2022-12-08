@@ -3,7 +3,8 @@ import math, threading;
 from mWindowsSDK import \
   CONSOLE_SCREEN_BUFFER_INFO, \
   DWORD, \
-  foLoadUser32DLL, \
+  ERROR_NO_DATA, \
+  foLoadUser32DLL, fs0GetWin32ErrorCodeDefineName, \
   NULL, \
   PCSTR, PCWSTR, PVOID, \
   STD_OUTPUT_HANDLE, \
@@ -203,16 +204,26 @@ class cConsole(object):
     while uIndex < len(sbMessage):
       uCharsToWrite = min(len(sbMessage) - uIndex, 10000);
       poBuffer = PCSTR(sbMessage[uIndex : uIndex + uCharsToWrite]);
-      assert oKernel32DLL.WriteFile(
+      if not oKernel32DLL.WriteFile(
         oSelf.ohStdOut,
         poBuffer.foCastTo(PVOID),
         uCharsToWrite,
         odwCharsWritten.foCreatePointer(),
         NULL
-      ), \
-          "kernel32!WriteFile(0x%X, 0x%X, 0x%X, 0x%X, NULL) => Error %08X" % \
-          (oSelf.ohStdOut, poBuffer, uCharsToWrite, \
-          odwCharsWritten.fuGetAddress(), oKernel32DLL.GetLastError());
+      ):
+        # If output is being piped to another process and that process closes the pipe,
+        # we will get an ERROR_NO_DATA error. We will ignore it.
+        uWin32Error = oKernel32DLL.GetLastError().fuGetValue();
+        assert uWin32Error == ERROR_NO_DATA, \
+            "kernel32!WriteFile(0x%X, 0x%X, 0x%X, 0x%X, NULL) => Error %08X (%s)" % (
+              oSelf.ohStdOut.fuGetValue(),
+              poBuffer.fuGetValue(),
+              uCharsToWrite,
+              odwCharsWritten.fuGetAddress(),
+              oKernel32DLL.GetLastError().fuGetValue(),
+              fs0GetWin32ErrorCodeDefineName(oKernel32DLL.GetLastError().fuGetValue()) or "unknown",
+            );
+        break;
       uIndex += odwCharsWritten.value;
   def __fWriteToStdOutConsole(oSelf, sMessage):
     odwCharsWritten = DWORD(0);
@@ -227,9 +238,14 @@ class cConsole(object):
         odwCharsWritten.foCreatePointer(),
         NULL
       ), \
-          "kernel32!WriteConsoleW(0x%X, 0x%X, 0x%X, 0x%X, NULL) => Error %08X" % \
-          (oSelf.ohStdOut, poBuffer, uCharsToWrite, \
-          odwCharsWritten.fuGetAddress(), oKernel32DLL.GetLastError());
+          "kernel32!WriteConsoleW(0x%X, 0x%X, 0x%X, 0x%X, NULL) => Error %08X" % (
+            oSelf.ohStdOut.fuGetValue(),
+            poBuffer.fuGetValue(),
+            uCharsToWrite,
+            odwCharsWritten.fuGetAddress(),
+            oKernel32DLL.GetLastError().fuGetValue(),
+            fs0GetWin32ErrorCodeDefineName(oKernel32DLL.GetLastError().fuGetValue()) or "unknown",
+          );
       uIndex += odwCharsWritten.value;
   
   def __fOutputHelper(oSelf, axCharsAndColors, bIsStatusMessage, uConvertTabsToSpaces, sPadding):
