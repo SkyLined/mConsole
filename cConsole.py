@@ -1,6 +1,15 @@
 import math, threading;
 
-from mWindowsSDK import *;
+from mWindowsSDK import \
+  CONSOLE_SCREEN_BUFFER_INFO, \
+  DWORD, \
+  foLoadUser32DLL, \
+  NULL, \
+  PCSTR, PCWSTR, PVOID, \
+  STD_OUTPUT_HANDLE, \
+  SW_HIDE, SW_SHOW, SW_SHOWMAXIMIZED, SW_SHOWMINIMIZED, SW_SHOWNA, SW_SHOWNORMAL, \
+  UINT, \
+  WINDOWPLACEMENT, WPF_ASYNCWINDOWPLACEMENT;
 from mWindowsSDK.mKernel32 import oKernel32DLL;
 
 from . import mCP437;
