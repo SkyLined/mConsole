@@ -210,8 +210,8 @@ class cConsole(object):
         odwCharsWritten.foCreatePointer(),
         NULL
       ), \
-          "%s(0x%X, 0x%X, 0x%X, 0x%X, NULL) => Error %08X" % \
-          (sWriteFunctionName, oSelf.ohStdOut, poBuffer, uCharsToWrite, \
+          "kernel32!WriteFile(0x%X, 0x%X, 0x%X, 0x%X, NULL) => Error %08X" % \
+          (oSelf.ohStdOut, poBuffer, uCharsToWrite, \
           odwCharsWritten.fuGetAddress(), oKernel32DLL.GetLastError());
       uIndex += odwCharsWritten.value;
   def __fWriteToStdOutConsole(oSelf, sMessage):
@@ -227,8 +227,8 @@ class cConsole(object):
         odwCharsWritten.foCreatePointer(),
         NULL
       ), \
-          "%s(0x%X, 0x%X, 0x%X, 0x%X, NULL) => Error %08X" % \
-          (sWriteFunctionName, oSelf.ohStdOut, poBuffer, uCharsToWrite, \
+          "kernel32!WriteConsoleW(0x%X, 0x%X, 0x%X, 0x%X, NULL) => Error %08X" % \
+          (oSelf.ohStdOut, poBuffer, uCharsToWrite, \
           odwCharsWritten.fuGetAddress(), oKernel32DLL.GetLastError());
       uIndex += odwCharsWritten.value;
   
