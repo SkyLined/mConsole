@@ -63,7 +63,7 @@ try:
     except Exception:
       pass;
     else:
-      raise AssertionFailure("Using a color number that is outside the value range did not cause an exception!");
+      raise AssertionError("Using a color number that is outside the value range did not cause an exception!");
   
   # Check log functionality:
   a0sLog = oConsole.fa0sGetLog();
