@@ -4,7 +4,7 @@ from mWindowsSDK import \
   CONSOLE_SCREEN_BUFFER_INFO, \
   DWORD, \
   ERROR_NO_DATA, \
-  foLoadUser32DLL, fs0GetWin32ErrorCodeDefineName, \
+  fs0GetWin32ErrorCodeDefineName, \
   NULL, \
   PCSTR, PCWSTR, PVOID, \
   STD_OUTPUT_HANDLE, \
