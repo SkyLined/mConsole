@@ -49,7 +49,7 @@ class cConsole(object):
       oSelf.bLastSetColorIsNotOriginal = False;
     oSelf.__aoCopyOutputToFileSystemItems = [];
     oSelf.__a0sLog = None;
-    oSelf.__oUser32 = None; # Lazy loaded as not every program needs it.
+    oSelf.__oUser32DLL = None; # Lazy loaded as not every program needs it.
   
   def fOutputCodepage437ToStdOut(oSelf):
     assert oSelf.__bOutputCodepage437ToStdOut is not False, \
@@ -61,12 +61,13 @@ class cConsole(object):
   def __fsStringFromBytes(oSelf, sbMessage):
     return mCP437.fsUnicodeFromBytes(sbMessage) if oSelf.__bOutputCodepage437ToStdOut else str(sbMessage, 'utf-8', "backslashreplace");
     
-  
+  # User32 is not required for most features, so it is only loaded when needed.
   @property
-  def oUser32(oSelf):
-    if oSelf.__oUser32 is None:
-      oSelf.__oUser32 = foLoadUser32DLL(); # We need this throughout the class, so might as well load it now.
-    return oSelf.__oUser32;
+  def oUser32DLL(oSelf):
+    if oSelf.__oUser32DLL is None:
+      from mWindowsSDK.mUser32 import oUser32DLL;
+      oSelf.__oUser32DLL = oUser32DLL; # We need this throughout the class, so might as well load it now.
+    return oSelf.__oUser32DLL;
   
   def fEnableLog(oSelf):
     if oSelf.__a0sLog is None:
@@ -439,11 +440,11 @@ class cConsole(object):
         "GetConsoleWindow() => Error %08X" % oKernel32DLL.GetLastError();
     oWindowPlacement = WINDOWPLACEMENT();
     oWindowPlacement.length = UINT(oWindowPlacement.fuGetSize());
-    assert oSelf.oUser32.GetWindowPlacement(oHWindow, oWindowPlacement.foCreatePointer()), \
+    assert oSelf.oUser32DLL.GetWindowPlacement(oHWindow, oWindowPlacement.foCreatePointer()), \
         "user32.GetWindowPlacement(%08X, %08X) => Error %08X" % \
             (oHWindow.value, oWindowPlacement.fuGetAddress(), oKernel32DLL.GetLastError());
     oWindowPlacement.flags = WPF_ASYNCWINDOWPLACEMENT;
     oWindowPlacement.showCmd = uShowCommand;
-    assert oSelf.oUser32.SetWindowPlacement(oHWindow, oWindowPlacement.foCreatePointer()), \
+    assert oSelf.oUser32DLL.SetWindowPlacement(oHWindow, oWindowPlacement.foCreatePointer()), \
         "user32.SetWindowPlacement(%08X, %08X) => Error %08X" % \
             (oHWindow.value, oWindowPlacement.fuGetAddress(), oKernel32DLL.GetLastError());
