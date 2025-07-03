@@ -57,7 +57,10 @@ class cFileSystemItemStandIn(object):
     return oSelf.__class__(sParentPath) if sParentPath != oSelf.sPath else None;
   
   def fsGetRelativePathTo(oSelf, oDescendant):
-    return os.path.relpath(oDescendant.sPath, oSelf.sPath);
+    try:
+      return os.path.relpath(oDescendant.sPath, oSelf.sPath);
+    except ValueError:
+      return None;
   
   def fCreateAsFolder(oSelf, bCreateParents = False):
     assert oSelf.fbCreateAsFolder(
